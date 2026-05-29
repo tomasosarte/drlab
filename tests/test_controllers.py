@@ -1,0 +1,80 @@
+import unittest
+
+import torch as th
+
+from drlab.controllers import (
+    EpsilonGreedyController,
+    GreedyController,
+    StochasticController,
+)
+
+
+class FixedLogits(th.nn.Module):
+    def __init__(self, logits):
+        super().__init__()
+        self.register_buffer("logits", th.as_tensor(logits, dtype=th.float32))
+
+    def forward(self, obs):
+        return self.logits.unsqueeze(0).expand(obs.shape[0], -1)
+
+
+class ControllerTest(unittest.TestCase):
+    def test_greedy_controller_selects_argmax_and_one_hot_probabilities(self):
+        model = FixedLogits([0.1, 2.0, -1.0])
+        controller = GreedyController(model, num_actions=3)
+        obs = th.zeros(4, 2)
+
+        actions = controller.choose(obs)
+        probs = controller.probabilities(obs)
+
+        self.assertTrue(th.equal(actions, th.full((4,), 1)))
+        self.assertEqual(probs.shape, (4, 3))
+        self.assertTrue(th.equal(probs[0], th.tensor([0.0, 1.0, 0.0])))
+
+    def test_epsilon_greedy_can_act_greedily_without_exploration(self):
+        model = FixedLogits([0.1, 2.0, -1.0])
+        greedy = GreedyController(model, num_actions=3)
+        controller = EpsilonGreedyController(
+            greedy,
+            num_actions=3,
+            max_eps=0.0,
+            min_eps=0.0,
+            anneal_steps=2,
+        )
+        obs = th.zeros(2, 2)
+
+        actions = controller.choose(obs)
+        probs = controller.probabilities(obs)
+
+        self.assertTrue(th.equal(actions, th.full((2,), 1)))
+        self.assertTrue(th.equal(probs[0], th.tensor([0.0, 1.0, 0.0])))
+        self.assertEqual(controller.num_decisions, 1)
+
+    def test_epsilon_greedy_probabilities_include_uniform_exploration(self):
+        model = FixedLogits([0.1, 2.0, -1.0])
+        greedy = GreedyController(model, num_actions=3)
+        controller = EpsilonGreedyController(
+            greedy,
+            num_actions=3,
+            max_eps=0.6,
+            min_eps=0.6,
+            anneal_steps=2,
+        )
+
+        probs = controller.probabilities(th.zeros(1, 2))
+
+        self.assertTrue(th.allclose(probs, th.tensor([[0.2, 0.6, 0.2]])))
+
+    def test_stochastic_controller_returns_softmax_probabilities_and_samples(self):
+        th.manual_seed(0)
+        model = FixedLogits([1.0, 2.0, 3.0])
+        controller = StochasticController(model, num_actions=3)
+        obs = th.zeros(5, 2)
+
+        probs = controller.probabilities(obs)
+        actions = controller.choose(obs)
+
+        self.assertEqual(probs.shape, (5, 3))
+        self.assertTrue(th.allclose(probs.sum(dim=-1), th.ones(5)))
+        self.assertEqual(actions.shape, (5,))
+        self.assertTrue(th.all((0 <= actions) & (actions < 3)))

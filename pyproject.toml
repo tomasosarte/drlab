@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drlab"
+version = "0.1.0"
+description = "Deep Reinforcement Learning kit for research."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Tomas Osarte" }]
+keywords = ["reinforcement-learning", "deep-learning", "pytorch", "gymnasium"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "torch>=2.2",
+    "numpy>=1.26",
+    "gymnasium>=1.0",
+    "tqdm>=4.66",
+    "tensorboard>=2.16",
+]
+
+[project.optional-dependencies]
+experiments = [
+    "ale-py>=0.11",
+    "gymnasium[box2d]>=1.0",
+    "matplotlib>=3.8",
+    "minigrid>=3.0",
+    "opencv-python>=4.10",
+    "scipy>=1.11",
+]
+dev = [
+    "build>=1.2",
+    "ipykernel>=6.29",
+    "notebook>=7.0",
+    "pip-tools>=7.4",
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["drlab*"]

@@ -60,6 +60,19 @@ They can also be imported from their subpackages:
 | `drlab.replay` | `ReplayBuffer`, `TransitionBatch` | Store, sample, move, and concatenate transitions. |
 | `drlab.experiments` | `DQNExperiment`, `DQNExperimentConfig`, `ActorCriticExperiment`, `ActorCriticExperimentConfig` | Run training loops with logging and progress bars. |
 
+## Implemented Algorithms
+
+| Algorithm | Type | Implementation Summary |
+| --- | --- | --- |
+| DQN | Off-policy value-based RL | Trains a Q-network with one-step TD targets from `(state, action, reward, done, next_state)` batches. It supports replay-buffer training through `DQNExperiment`, target networks, Double DQN action selection, hard or soft target-network updates, gradient clipping, configurable discounting, and custom regularizers. |
+| Actor-Critic | On-policy policy-gradient RL | Trains a shared policy/value network from transition batches and returns. The policy head is optimized with advantage-weighted log probabilities, while the value head can use TD targets or full returns. It supports bootstrapped advantages, optional baseline subtraction, advantage normalization, entropy regularization with annealing, gradient clipping, custom regularizers, and PPO-style clipped policy updates for extra optimization passes. |
+
+The package also includes reusable action-selection controllers:
+
+- `GreedyController`: deterministic argmax action selection from model scores.
+- `EpsilonGreedyController`: epsilon-greedy exploration with linear annealing.
+- `StochasticController`: samples actions from softmax probabilities.
+
 ## Model Output Convention
 
 Controllers and learners expect the model output to use a shared layout:

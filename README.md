@@ -62,6 +62,9 @@ They can also be imported from their subpackages:
 
 ## Implemented Algorithms
 
+For a detailed explanation of each algorithm, training flow, and configuration
+parameter, see [RL Algorithms and Parameters](docs/rl_algorithms.md).
+
 | Algorithm | Type | Implementation Summary |
 | --- | --- | --- |
 | DQN | Off-policy value-based RL | Trains a Q-network with one-step TD targets from `(state, action, reward, done, next_state)` batches. It supports replay-buffer training through `DQNExperiment`, target networks, Double DQN action selection, hard or soft target-network updates, gradient clipping, configurable discounting, and custom regularizers. |

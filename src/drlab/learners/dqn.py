@@ -19,7 +19,7 @@ class DQNConfig:
     soft_target_update_param: float = 0.1
     num_actions: int = 2
 
-class DQN:
+class DQNLearner:
     def __init__(
         self,
         model: th.nn.Module,

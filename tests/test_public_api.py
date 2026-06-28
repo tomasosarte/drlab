@@ -6,21 +6,28 @@ import drlab
 class PublicAPITest(unittest.TestCase):
     def test_root_exports_expected_public_symbols(self):
         expected = {
-            "ActorCritic",
             "ActorCriticConfig",
+            "ActorCriticLearner",
             "OnPolicyExperiment",
             "OnPolicyExperimentConfig",
             "Controller",
-            "DQN",
             "DQNConfig",
+            "DQNLearner",
+            "OnPolicyConfig",
+            "OnPolicyLearner",
             "OffPolicyExperiment",
             "OffPolicyExperimentConfig",
+            "PPOConfig",
+            "PPOLearner",
+            "ReinforceConfig",
+            "ReinforceLearner",
             "EpsilonGreedyController",
             "GreedyController",
             "ReplayBuffer",
             "Runner",
             "StochasticController",
             "TransitionBatch",
+            "ValueTargets",
         }
 
         self.assertEqual(drlab.__version__, "0.1.2")

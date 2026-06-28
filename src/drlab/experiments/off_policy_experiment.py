@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Callable
 from torch.utils.tensorboard import SummaryWriter
 
-from drlab.learners import DQN
+from drlab.learners import DQNLearner
 from drlab.runners import Runner
 from drlab.controllers import Controller
 from drlab.replay import TransitionBatch, ReplayBuffer
@@ -32,7 +32,7 @@ class OffPolicyExperiment:
             self,
             env: gym.Env,
             controller: Controller,
-            learner: DQN,
+            learner: DQNLearner,
             config: OffPolicyExperimentConfig,
         ):
 

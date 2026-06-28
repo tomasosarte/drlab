@@ -1,21 +1,18 @@
-from .dqn import DQNConfig, DQNLearner
-from .on_policy import (
+from .actor_critic import ActorCriticLearner
+from .base import OnPolicyLearner
+from .configs import (
     ActorCriticConfig,
-    ActorCriticLearner,
     OnPolicyConfig,
-    OnPolicyLearner,
     PPOConfig,
-    PPOLearner,
     ReinforceConfig,
-    ReinforceLearner,
     ValueTargets,
 )
+from .ppo import PPOLearner
+from .reinforce import ReinforceLearner
 
 __all__ = [
     "ActorCriticConfig",
     "ActorCriticLearner",
-    "DQNConfig",
-    "DQNLearner",
     "OnPolicyConfig",
     "OnPolicyLearner",
     "PPOConfig",

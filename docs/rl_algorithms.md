@@ -59,7 +59,7 @@ mostly relevant to runner bookkeeping for DQN.
 
 ## Deep Q-Network
 
-`DQN` is an off-policy value-based learner. It trains a Q-network from sampled
+`DQNLearner` is an off-policy value-based learner. It trains a Q-network from sampled
 transitions and is usually paired with `EpsilonGreedyController`,
 `OffPolicyExperiment`, and `ReplayBuffer`.
 
@@ -140,7 +140,7 @@ next_value = max_a Q(next_state, a)
 
 ### DQN Training Flow
 
-`DQN.train(...)` performs one optimizer step:
+`DQNLearner.train(...)` performs one optimizer step:
 
 1. Switches the online model to train mode.
 2. Computes the one-step TD target.
@@ -153,7 +153,7 @@ next_value = max_a Q(next_state, a)
 
 ### OffPolicyExperiment Parameters
 
-`OffPolicyExperiment` provides a full training loop around DQN.
+`OffPolicyExperiment` provides a full training loop around `DQNLearner`.
 
 | Parameter | Default | Meaning |
 | --- | --- | --- |
@@ -197,16 +197,15 @@ For discrete-control tasks such as CartPole, common starting points are:
 
 ## Actor-Critic
 
-`ActorCritic` is an on-policy policy-gradient learner. It expects one model
-that emits both policy logits and a scalar value estimate:
+`ActorCriticLearner` is an on-policy policy-gradient learner. It expects one
+model that emits both policy logits and a scalar value estimate:
 
 ```text
 output[:, :num_actions]              -> policy logits
 output[:, num_actions:num_actions+1] -> value estimate
 ```
 
-It is usually paired with `StochasticController` and
-`OnPolicyExperiment`.
+It is usually paired with `StochasticController` and `OnPolicyExperiment`.
 
 ### Policy Loss
 
@@ -217,7 +216,7 @@ learner gathers the probability of the action that was actually taken:
 pi_action = pi(action | state)
 ```
 
-On the first optimization pass, the policy loss is:
+The policy loss is:
 
 ```text
 policy_loss = -mean(log(pi_action) * advantage)
@@ -269,11 +268,13 @@ value_lambda * value_criterion(V(state), value_target)
 
 When `use_bias=False`, no value loss is added.
 
-### PPO-Style Extra Optimization Passes
+### PPO Learner
 
-`off_policy_iterations` controls extra optimizer passes over the same collected
-batch. The first pass stores the old action probabilities. Extra passes use a
-ratio objective with clipping:
+PPO is implemented separately by `PPOLearner` and `PPOConfig`. It uses the
+same policy/value model layout and advantage/value logic as
+`ActorCriticLearner`, then reuses the collected batch for `ppo_iterations`
+optimization epochs. Before the first update, it stores the old action
+probabilities. Each epoch uses a ratio objective with clipping:
 
 ```text
 ratio = pi_new(action | state) / pi_old(action | state)
@@ -281,9 +282,8 @@ clipped_ratio = clamp(ratio, 1 - ppo_clipping, 1 + ppo_clipping)
 loss = -mean(min(ratio * advantage, clipped_ratio * advantage))
 ```
 
-This is a PPO-style clipped update over the same batch. The implementation does
-not add generalized advantage estimation, minibatch shuffling, or a separate
-old policy network.
+The implementation does not add generalized advantage estimation, minibatch
+shuffling, or a separate old policy network.
 
 ### Entropy Regularization
 
@@ -316,13 +316,20 @@ enough that the policy can still become decisive when useful.
 | `value_targets` | `"td"` | Target type for the value head. Must be `"td"` or `"returns"`. |
 | `gamma` | `0.99` | Discount used for bootstrapped advantages and TD value targets. |
 | `advantage_bootstrap` | `True` | Uses one-step bootstrapped targets for advantages instead of full returns. |
-| `off_policy_iterations` | `0` | Number of extra PPO-style optimization passes after the first on-policy pass. |
-| `ppo_clipping` | `0.1` | Clipping range for the PPO-style ratio objective. |
 | `use_entropy` | `False` | Enables entropy regularization. |
 | `entropy_max_lambda` | `0.0` | Initial entropy coefficient. |
 | `entropy_min_lambda` | `0.0` | Final entropy coefficient after annealing. |
 | `entropy_anneal_steps` | `1` | Number of learner calls used for entropy annealing. Must be greater than `1` when entropy is enabled. |
 | `normalize_advantages` | `False` | Normalizes advantages within each training batch. |
+
+### PPOConfig Parameters
+
+`PPOConfig` includes all `ActorCriticConfig` parameters plus:
+
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `ppo_clipping` | `0.1` | Clipping range for the PPO ratio objective. |
+| `ppo_iterations` | `4` | Number of optimization epochs over the collected rollout batch. |
 
 Important validation rules:
 
@@ -335,7 +342,7 @@ Important validation rules:
 
 ### Actor-Critic Training Flow
 
-`ActorCritic.train(...)` performs `1 + off_policy_iterations` optimizer steps:
+`ActorCriticLearner.train(...)` performs one optimizer step:
 
 1. Switches the actor to train mode.
 2. Computes policy logits and values for the collected states.
@@ -345,7 +352,7 @@ Important validation rules:
 6. Clears gradients, backpropagates, optionally clips gradients, and steps the
    optimizer.
 7. Advances the entropy annealing counter once per call.
-8. Returns the sum of losses across all optimization passes.
+8. Returns the scalar loss.
 
 ### OnPolicyExperiment Parameters
 
@@ -363,7 +370,7 @@ Important validation rules:
 
 Important behavior:
 
-- The actor-critic experiment does not use a replay buffer.
+- The on-policy experiment does not use a replay buffer.
 - The learner trains immediately on each collected batch.
 - The runner computes discounted returns only when the learner configuration
   needs them: return-based advantages, or return-based value targets with a
@@ -385,8 +392,7 @@ For small discrete-control tasks, common starting points are:
   meaningful mean and standard deviation.
 - `use_entropy=True` with a small entropy coefficient when the policy collapses
   too early.
-- `off_policy_iterations=0` for the simplest on-policy update; increase
-  carefully if you want PPO-style repeated updates.
+- Use `PPOLearner` when you want PPO-style repeated clipped-ratio updates.
 
 ## Controllers
 
@@ -527,9 +533,9 @@ Use actor-critic when:
 
 - The action space is discrete and a stochastic policy is useful.
 - You want on-policy policy-gradient updates.
-- You want a value baseline, entropy regularization, or PPO-style repeated
-  updates.
+- You want a value baseline, entropy regularization, or, with `PPOLearner`,
+  PPO-style repeated updates.
 - You prefer directly optimizing action probabilities instead of Q-values.
 
-Both algorithms in this package assume discrete action spaces. Continuous
+The algorithms in this package assume discrete action spaces. Continuous
 action algorithms are not currently implemented.

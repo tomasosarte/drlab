@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Callable
 from torch.utils.tensorboard import SummaryWriter
 
-from drlab.learners import ActorCritic
+from drlab.learners import OnPolicyLearner
 from drlab.runners import Runner
 from drlab.controllers import Controller
 
@@ -27,7 +27,7 @@ class OnPolicyExperiment:
         self,
         env: gym.Env,
         controller: Controller,
-        learner: ActorCritic,
+        learner: OnPolicyLearner,
         config: OnPolicyExperimentConfig,
     ):  
         # Init experiment settings
@@ -36,11 +36,7 @@ class OnPolicyExperiment:
         self.step_callback = config.step_callback
         self.step_callback_interval = config.step_callback_interval
         
-        # Only ask the runner to compute discounted returns when the learner uses them.
-        calculate_returns = (
-            not learner.config.advantage_bootstrap
-            or (learner.config.use_bias and learner.config.value_targets == "returns")
-        )
+        calculate_returns = learner.requires_returns()
 
         # Init drl components
         self.runner = Runner(env, controller, calculate_returns, False, config.gamma, learner.device)

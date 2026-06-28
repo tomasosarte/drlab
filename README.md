@@ -3,7 +3,7 @@
 `drlab` is a small deep reinforcement learning package for research code and
 experiments. It provides reusable building blocks for Gymnasium environments:
 
-- DQN and actor-critic learners
+- DQN, REINFORCE, actor-critic, and PPO learners
 - greedy, epsilon-greedy, and stochastic controllers
 - a transition runner for collecting environment interaction
 - replay buffer and transition batch utilities
@@ -74,13 +74,17 @@ Public classes are available from the package root:
 
 ```python
 from drlab import (
-    ActorCritic,
     ActorCriticConfig,
+    ActorCriticLearner,
     OnPolicyExperiment,
     OnPolicyExperimentConfig,
     Controller,
-    DQN,
     DQNConfig,
+    DQNLearner,
+    PPOConfig,
+    PPOLearner,
+    ReinforceConfig,
+    ReinforceLearner,
     OffPolicyExperiment,
     OffPolicyExperimentConfig,
     EpsilonGreedyController,
@@ -96,7 +100,7 @@ They can also be imported from their subpackages:
 
 | Subpackage | Exports | Purpose |
 | --- | --- | --- |
-| `drlab.learners` | `DQN`, `DQNConfig`, `ActorCritic`, `ActorCriticConfig` | Update PyTorch models from transition batches. |
+| `drlab.learners` | `DQNLearner`, `DQNConfig`, `ReinforceLearner`, `ActorCriticLearner`, `PPOLearner` and configs | Update PyTorch models from transition batches. |
 | `drlab.controllers` | `Controller`, `GreedyController`, `EpsilonGreedyController`, `StochasticController` | Convert model outputs into environment actions. |
 | `drlab.runners` | `Runner` | Collect transitions from a Gymnasium environment. |
 | `drlab.replay` | `ReplayBuffer`, `TransitionBatch` | Store, sample, move, and concatenate transitions. |
@@ -110,7 +114,9 @@ parameter, see [RL Algorithms and Parameters](docs/rl_algorithms.md).
 | Algorithm | Type | Implementation Summary |
 | --- | --- | --- |
 | DQN | Off-policy value-based RL | Trains a Q-network with one-step TD targets from `(state, action, reward, done, next_state)` batches. It supports replay-buffer training through `OffPolicyExperiment`, target networks, Double DQN action selection, hard or soft target-network updates, gradient clipping, configurable discounting, and custom regularizers. |
-| Actor-Critic | On-policy policy-gradient RL | Trains a shared policy/value network from transition batches and returns. The policy head is optimized with advantage-weighted log probabilities, while the value head can use TD targets or full returns. It supports bootstrapped advantages, optional baseline subtraction, advantage normalization, entropy regularization with annealing, gradient clipping, custom regularizers, and PPO-style clipped policy updates for extra optimization passes. |
+| REINFORCE | On-policy policy-gradient RL | Trains a stochastic policy directly from discounted returns, with optional return normalization, entropy regularization, gradient clipping, and custom regularizers. |
+| Actor-Critic | On-policy policy-gradient RL | Trains a shared policy/value network from transition batches and returns. The policy head is optimized with advantage-weighted log probabilities, while the value head can use TD targets or full returns. It supports bootstrapped advantages, optional baseline subtraction, advantage normalization, entropy regularization with annealing, gradient clipping, and custom regularizers. |
+| PPO | On-policy policy-gradient RL | Reuses an actor-critic rollout batch for multiple clipped-ratio optimization epochs through `PPOLearner` and `PPOConfig`. |
 
 The package also includes reusable action-selection controllers:
 
@@ -124,7 +130,8 @@ Controllers and learners expect the model output to use a shared layout:
 
 - DQN models should output at least `num_actions` columns. The first
   `num_actions` columns are treated as action scores.
-- Actor-critic models should output at least `num_actions + 1` columns. The
+- REINFORCE models should output at least `num_actions` policy-logit columns.
+- Actor-critic and PPO models should output at least `num_actions + 1` columns. The
   first `num_actions` columns are policy logits, and the next column is the
   value estimate.
 
@@ -135,8 +142,8 @@ import gymnasium as gym
 import torch as th
 
 from drlab import (
-    DQN,
     DQNConfig,
+    DQNLearner,
     OffPolicyExperiment,
     OffPolicyExperimentConfig,
     EpsilonGreedyController,
@@ -152,7 +159,7 @@ model = th.nn.Sequential(
 )
 optimizer = th.optim.Adam(model.parameters(), lr=1e-3)
 
-learner = DQN(model, optimizer, DQNConfig(num_actions=2))
+learner = DQNLearner(model, optimizer, DQNConfig(num_actions=2))
 controller = EpsilonGreedyController(
     GreedyController(model, num_actions=2),
     num_actions=2,
@@ -179,21 +186,28 @@ experiment.run()
 
 ### Learners
 
-`DQN` trains a Q-network from `(rewards, dones, states, actions, next_states)`.
+`DQNLearner` trains a Q-network from `(rewards, dones, states, actions, next_states)`.
 Its config supports target networks, double Q-learning, hard or soft target
 updates, gradient clipping, discounting, and custom regularizers.
 
 ```python
-from drlab.learners import DQN, DQNConfig
+from drlab.learners import DQNConfig, DQNLearner
 ```
 
-`ActorCritic` trains a policy/value network from transition batches with
+`ActorCriticLearner` trains a policy/value network from transition batches with
 returns. Its config supports TD or return-based value targets, bootstrapped
-advantages, PPO-style clipping, entropy regularization, advantage
-normalization, and custom regularizers.
+advantages, entropy regularization, advantage normalization, and custom
+regularizers.
 
 ```python
-from drlab.learners import ActorCritic, ActorCriticConfig
+from drlab.learners import ActorCriticLearner, ActorCriticConfig
+```
+
+`ReinforceLearner` and `PPOLearner` provide separate REINFORCE and PPO
+implementations:
+
+```python
+from drlab.learners import ReinforceLearner, ReinforceConfig, PPOLearner, PPOConfig
 ```
 
 ### Controllers

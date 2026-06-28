@@ -34,13 +34,13 @@ Public classes are available from the package root:
 from drlab import (
     ActorCritic,
     ActorCriticConfig,
-    ActorCriticExperiment,
-    ActorCriticExperimentConfig,
+    OnPolicyExperiment,
+    OnPolicyExperimentConfig,
     Controller,
     DQN,
     DQNConfig,
-    DQNExperiment,
-    DQNExperimentConfig,
+    OffPolicyExperiment,
+    OffPolicyExperimentConfig,
     EpsilonGreedyController,
     GreedyController,
     ReplayBuffer,
@@ -58,7 +58,7 @@ They can also be imported from their subpackages:
 | `drlab.controllers` | `Controller`, `GreedyController`, `EpsilonGreedyController`, `StochasticController` | Convert model outputs into environment actions. |
 | `drlab.runners` | `Runner` | Collect transitions from a Gymnasium environment. |
 | `drlab.replay` | `ReplayBuffer`, `TransitionBatch` | Store, sample, move, and concatenate transitions. |
-| `drlab.experiments` | `DQNExperiment`, `DQNExperimentConfig`, `ActorCriticExperiment`, `ActorCriticExperimentConfig` | Run training loops with logging and progress bars. |
+| `drlab.experiments` | `OffPolicyExperiment`, `OffPolicyExperimentConfig`, `OnPolicyExperiment`, `OnPolicyExperimentConfig` | Run training loops with logging and progress bars. |
 
 ## Implemented Algorithms
 
@@ -67,7 +67,7 @@ parameter, see [RL Algorithms and Parameters](docs/rl_algorithms.md).
 
 | Algorithm | Type | Implementation Summary |
 | --- | --- | --- |
-| DQN | Off-policy value-based RL | Trains a Q-network with one-step TD targets from `(state, action, reward, done, next_state)` batches. It supports replay-buffer training through `DQNExperiment`, target networks, Double DQN action selection, hard or soft target-network updates, gradient clipping, configurable discounting, and custom regularizers. |
+| DQN | Off-policy value-based RL | Trains a Q-network with one-step TD targets from `(state, action, reward, done, next_state)` batches. It supports replay-buffer training through `OffPolicyExperiment`, target networks, Double DQN action selection, hard or soft target-network updates, gradient clipping, configurable discounting, and custom regularizers. |
 | Actor-Critic | On-policy policy-gradient RL | Trains a shared policy/value network from transition batches and returns. The policy head is optimized with advantage-weighted log probabilities, while the value head can use TD targets or full returns. It supports bootstrapped advantages, optional baseline subtraction, advantage normalization, entropy regularization with annealing, gradient clipping, custom regularizers, and PPO-style clipped policy updates for extra optimization passes. |
 
 The package also includes reusable action-selection controllers:
@@ -95,8 +95,8 @@ import torch as th
 from drlab import (
     DQN,
     DQNConfig,
-    DQNExperiment,
-    DQNExperimentConfig,
+    OffPolicyExperiment,
+    OffPolicyExperimentConfig,
     EpsilonGreedyController,
     GreedyController,
 )
@@ -119,11 +119,11 @@ controller = EpsilonGreedyController(
     anneal_steps=10_000,
 )
 
-experiment = DQNExperiment(
+experiment = OffPolicyExperiment(
     env,
     controller,
     learner,
-    DQNExperimentConfig(
+    OffPolicyExperimentConfig(
         max_steps=20_000,
         run_steps=1,
         batch_size=128,
@@ -210,14 +210,14 @@ buffer behavior, progress bar, and TensorBoard logging.
 
 ```python
 from drlab.experiments import (
-    ActorCriticExperiment,
-    ActorCriticExperimentConfig,
-    DQNExperiment,
-    DQNExperimentConfig,
+    OnPolicyExperiment,
+    OnPolicyExperimentConfig,
+    OffPolicyExperiment,
+    OffPolicyExperimentConfig,
 )
 ```
 
-Use `DQNExperiment` for off-policy DQN training and `ActorCriticExperiment` for
+Use `OffPolicyExperiment` for off-policy DQN training and `OnPolicyExperiment` for
 on-policy actor-critic training.
 
 ## Development

@@ -61,7 +61,7 @@ mostly relevant to runner bookkeeping for DQN.
 
 `DQN` is an off-policy value-based learner. It trains a Q-network from sampled
 transitions and is usually paired with `EpsilonGreedyController`,
-`DQNExperiment`, and `ReplayBuffer`.
+`OffPolicyExperiment`, and `ReplayBuffer`.
 
 ### Update Rule
 
@@ -151,17 +151,17 @@ next_value = max_a Q(next_state, a)
 6. Updates the target model according to `target_update`.
 7. Returns the scalar loss as a Python `float`.
 
-### DQNExperiment Parameters
+### OffPolicyExperiment Parameters
 
-`DQNExperiment` provides a full training loop around DQN.
+`OffPolicyExperiment` provides a full training loop around DQN.
 
 | Parameter | Default | Meaning |
 | --- | --- | --- |
 | `max_steps` | Required | Total environment transitions to collect before stopping. |
 | `gamma` | `0.99` | Discount used by `Runner` if it computes returns. DQN itself uses `DQNConfig.gamma`. |
 | `run_steps` | `0` | Number of transitions collected per runner call. `0` or less means collect one full episode. |
-| `log_dir` | `"runs/dqn_experiment"` | TensorBoard log directory. |
-| `experiment_name` | `"DQNExperiment"` | Progress bar label. |
+| `log_dir` | `"runs/off_policy_experiment"` | TensorBoard log directory. |
+| `experiment_name` | `"OffPolicyExperiment"` | Progress bar label. |
 | `use_replay` | `True` | Stores transitions in a replay buffer and samples minibatches. |
 | `replay_buffer_size` | `10_000` | Maximum number of transitions retained by the replay buffer. |
 | `batch_size` | `128` | Minibatch size and minimum buffer size before learning starts. |
@@ -176,7 +176,7 @@ Important behavior:
   `batch_size` transitions.
 - `ReplayBuffer.sample(batch_size)` samples uniformly with replacement and
   returns fewer than `batch_size` transitions only when the buffer is smaller.
-  `DQNExperiment` avoids this by waiting for `buffer.size >= batch_size`.
+  `OffPolicyExperiment` avoids this by waiting for `buffer.size >= batch_size`.
 - With `use_replay=False`, the internal buffer capacity is `batch_size`.
   Ensure a collected runner batch is not larger than `batch_size`.
 - With `use_last_episode=True`, a full latest episode can dominate the
@@ -206,7 +206,7 @@ output[:, num_actions:num_actions+1] -> value estimate
 ```
 
 It is usually paired with `StochasticController` and
-`ActorCriticExperiment`.
+`OnPolicyExperiment`.
 
 ### Policy Loss
 
@@ -347,17 +347,17 @@ Important validation rules:
 7. Advances the entropy annealing counter once per call.
 8. Returns the sum of losses across all optimization passes.
 
-### ActorCriticExperiment Parameters
+### OnPolicyExperiment Parameters
 
-`ActorCriticExperiment` provides a full on-policy training loop.
+`OnPolicyExperiment` provides a full on-policy training loop.
 
 | Parameter | Default | Meaning |
 | --- | --- | --- |
 | `max_steps` | Required | Total environment transitions to collect before stopping. |
 | `gamma` | `0.99` | Discount used by `Runner` when it computes returns. Keep aligned with `ActorCriticConfig.gamma` for return-based objectives. |
 | `run_steps` | `0` | Number of transitions collected per runner call. `0` or less means collect one full episode. |
-| `log_dir` | `"runs/reinforce_experiment"` | TensorBoard log directory. |
-| `experiment_name` | `"ActorCriticExperiment"` | Progress bar label. |
+| `log_dir` | `"runs/on_policy_experiment"` | TensorBoard log directory. |
+| `experiment_name` | `"OnPolicyExperiment"` | Progress bar label. |
 | `step_callback` | `None` | Optional callable invoked at step `0` and then on configured step intervals. |
 | `step_callback_interval` | `None` | Step spacing for `step_callback`. Required when a callback is provided. |
 

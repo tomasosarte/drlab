@@ -8,13 +8,13 @@ class PublicAPITest(unittest.TestCase):
         expected = {
             "ActorCritic",
             "ActorCriticConfig",
-            "ActorCriticExperiment",
-            "ActorCriticExperimentConfig",
+            "OnPolicyExperiment",
+            "OnPolicyExperimentConfig",
             "Controller",
             "DQN",
             "DQNConfig",
-            "DQNExperiment",
-            "DQNExperimentConfig",
+            "OffPolicyExperiment",
+            "OffPolicyExperimentConfig",
             "EpsilonGreedyController",
             "GreedyController",
             "ReplayBuffer",
@@ -23,7 +23,7 @@ class PublicAPITest(unittest.TestCase):
             "TransitionBatch",
         }
 
-        self.assertEqual(drlab.__version__, "0.1.0")
+        self.assertEqual(drlab.__version__, "0.1.1")
         self.assertTrue(expected.issubset(set(drlab.__all__)))
         for name in expected:
             self.assertTrue(hasattr(drlab, name), name)

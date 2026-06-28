@@ -11,24 +11,24 @@ from drlab.controllers import Controller
 
 
 @dataclass
-class ActorCriticExperimentConfig:
+class OnPolicyExperimentConfig:
     max_steps: int
     gamma: float = 0.99
     run_steps: int = 0
-    log_dir: str = "runs/reinforce_experiment"
-    experiment_name: str = "ActorCriticExperiment"
+    log_dir: str = "runs/on_policy_experiment"
+    experiment_name: str = "OnPolicyExperiment"
     step_callback: Callable[[int], None] | None = None
     step_callback_interval: int | None = None
 
 
-class ActorCriticExperiment:
+class OnPolicyExperiment:
 
     def __init__(
         self,
         env: gym.Env,
         controller: Controller,
         learner: ActorCritic,
-        config: ActorCriticExperimentConfig,
+        config: OnPolicyExperimentConfig,
     ):  
         # Init experiment settings
         self.max_steps = config.max_steps

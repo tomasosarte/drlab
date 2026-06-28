@@ -5,10 +5,10 @@ from drlab.controllers import (
     StochasticController,
 )
 from drlab.experiments import (
-    ActorCriticExperiment,
-    ActorCriticExperimentConfig,
-    DQNExperiment,
-    DQNExperimentConfig,
+    OnPolicyExperiment,
+    OnPolicyExperimentConfig,
+    OffPolicyExperiment,
+    OffPolicyExperimentConfig,
 )
 from drlab.learners import ActorCritic, ActorCriticConfig, DQN, DQNConfig
 from drlab.replay import ReplayBuffer, TransitionBatch
@@ -20,13 +20,13 @@ __all__ = [
     "__version__",
     "ActorCritic",
     "ActorCriticConfig",
-    "ActorCriticExperiment",
-    "ActorCriticExperimentConfig",
+    "OnPolicyExperiment",
+    "OnPolicyExperimentConfig",
     "Controller",
     "DQN",
     "DQNConfig",
-    "DQNExperiment",
-    "DQNExperimentConfig",
+    "OffPolicyExperiment",
+    "OffPolicyExperimentConfig",
     "EpsilonGreedyController",
     "GreedyController",
     "ReplayBuffer",

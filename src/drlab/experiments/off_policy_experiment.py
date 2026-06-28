@@ -11,12 +11,12 @@ from drlab.controllers import Controller
 from drlab.replay import TransitionBatch, ReplayBuffer
 
 @dataclass
-class DQNExperimentConfig:
+class OffPolicyExperimentConfig:
     max_steps: int
     gamma: float = 0.99
     run_steps: int = 0
-    log_dir: str = "runs/dqn_experiment"
-    experiment_name: str = "DQNExperiment"
+    log_dir: str = "runs/off_policy_experiment"
+    experiment_name: str = "OffPolicyExperiment"
     use_replay: bool = True
     replay_buffer_size: int = 10_000
     batch_size: int = 128
@@ -26,14 +26,14 @@ class DQNExperimentConfig:
     step_callback_interval: int | None = None
 
 
-class DQNExperiment:
+class OffPolicyExperiment:
 
     def __init__(
             self,
             env: gym.Env,
             controller: Controller,
             learner: DQN,
-            config: DQNExperimentConfig,
+            config: OffPolicyExperimentConfig,
         ):
 
         # Init experiment settings

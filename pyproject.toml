@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "drlab"
-version = "0.1.1"
+version = "0.1.2"
 description = "Deep Reinforcement Learning kit for research."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,7 +20,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "torch==2.10.0+cu128",
+    "torch>=2.0,<3",
     "numpy==2.4.2",
     "gymnasium==1.2.3",
     "tqdm>=4.66",

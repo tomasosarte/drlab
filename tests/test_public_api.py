@@ -23,7 +23,7 @@ class PublicAPITest(unittest.TestCase):
             "TransitionBatch",
         }
 
-        self.assertEqual(drlab.__version__, "0.1.1")
+        self.assertEqual(drlab.__version__, "0.1.2")
         self.assertTrue(expected.issubset(set(drlab.__all__)))
         for name in expected:
             self.assertTrue(hasattr(drlab, name), name)

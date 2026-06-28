@@ -14,6 +14,48 @@ controller, runner, learner, and optionally an experiment wrapper.
 
 ## Installation
 
+The recommended development setup uses
+[`uv`](https://docs.astral.sh/uv/) to create a private `.venv`, install the
+package in editable mode, and keep dependencies locked.
+
+Install `uv` once:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then, from the repository root:
+
+```bash
+uv sync --extra experiments --extra dev
+```
+
+Run commands through the managed environment:
+
+```bash
+uv run python -m unittest discover -v
+uv run python -c "import drlab; print(drlab.__version__)"
+```
+
+Or activate the private environment manually:
+
+```bash
+source .venv/bin/activate
+python -m unittest discover -v
+```
+
+The package depends on PyTorch `>=2.0,<3`. For a specific CUDA build, install
+the matching PyTorch wheel for your machine before syncing the rest of the
+environment, for example:
+
+```bash
+uv pip install torch --index-url https://download.pytorch.org/whl/cu128
+uv sync --extra experiments --extra dev
+```
+
+Commit `pyproject.toml` and `uv.lock`, but do not commit `.venv/`.
+
+For a plain `pip` install, create and activate a virtual environment first.
 From the repository root:
 
 ```bash

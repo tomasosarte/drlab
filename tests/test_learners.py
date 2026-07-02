@@ -7,6 +7,7 @@ from drlab.learners import (
     ActorCriticLearner,
     DQNConfig,
     DQNLearner,
+    OffPolicyLearner,
     PPOConfig,
     PPOLearner,
     ReinforceConfig,
@@ -51,6 +52,7 @@ class LearnerSmokeTest(unittest.TestCase):
         )
 
         self.assertIsInstance(loss, float)
+        self.assertIsInstance(learner, OffPolicyLearner)
         self.assertTrue(th.isfinite(th.tensor(loss)))
         self.assertTrue(parameters_changed(model, before))
 

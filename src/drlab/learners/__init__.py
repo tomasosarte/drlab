@@ -1,4 +1,5 @@
-from .dqn import DQNConfig, DQNLearner
+from .off_policy.dqn import DQNConfig, DQNLearner
+from .off_policy import OffPolicyConfig, OffPolicyLearner, TargetUpdate
 from .on_policy import (
     ActorCriticConfig,
     ActorCriticLearner,
@@ -18,9 +19,12 @@ __all__ = [
     "DQNLearner",
     "OnPolicyConfig",
     "OnPolicyLearner",
+    "OffPolicyConfig",
+    "OffPolicyLearner",
     "PPOConfig",
     "PPOLearner",
     "ReinforceConfig",
     "ReinforceLearner",
+    "TargetUpdate",
     "ValueTargets",
 ]

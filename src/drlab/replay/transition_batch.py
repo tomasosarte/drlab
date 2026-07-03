@@ -5,7 +5,7 @@ from dataclasses import dataclass
 @dataclass
 class TransitionBatch:
     states: th.Tensor       # [B, obs_dim]
-    actions: th.Tensor      # [B, 1] (long)
+    actions: th.Tensor      # [B, 1] (int64/float32)
     rewards: th.Tensor      # [B, 1] (float)
     dones: th.Tensor        # [B, 1] (bool)
     next_states: th.Tensor  # [B, obs_dim]

@@ -14,13 +14,15 @@ class Runner:
             calculate_returns: bool = True,
             return_last_episode: bool = True,
             gamma: float = 0.99,
-            device: str = "cpu"
+            device: str = "cpu",
+            continuous_actions: bool = False
         ):
 
         self.env = env
         self.controller = controller
         self.gamma = gamma
         self.device = device
+        self.continuous_actions = continuous_actions
         self.state, _ = self.env.reset()
         self.calculate_returns = calculate_returns
         self.return_last_episode = return_last_episode
@@ -38,6 +40,24 @@ class Runner:
         
         return out
 
+    def _action_to_env(self, action_t: th.Tensor):
+        if self.continuous_actions:
+            action = action_t.squeeze(0).detach().cpu().numpy().astype(np.float32)
+            return np.clip(
+                action,
+                self.env.action_space.low,
+                self.env.action_space.high,
+            )
+
+        return int(action_t.item())
+
+
+    def _actions_to_tensor(self, actions):
+        if self.continuous_actions:
+            return th.from_numpy(np.asarray(actions, dtype=np.float32))
+
+        return th.as_tensor(actions, dtype=th.int64).unsqueeze(-1)
+    
     def run(
             self,
             num_steps: int
@@ -55,8 +75,9 @@ class Runner:
 
             # 1. Environment step
             state_t = th.as_tensor(self.state, dtype=th.float32, device=self.device).unsqueeze(0)
-            with th.inference_mode(): 
-                action = self.controller.choose(state_t).item()
+            with th.inference_mode():
+                action_t = self.controller.choose(state_t)
+            action = self._action_to_env(action_t)
             next_state, reward, terminated, truncated, _ = self.env.step(action) 
             done = terminated or truncated
 
@@ -92,7 +113,7 @@ class Runner:
                 if self.return_last_episode:
                     last_episode = TransitionBatch(
                         states=th.from_numpy(np.asarray(self._ep_states, dtype=np.float32)),
-                        actions=th.as_tensor(self._ep_actions, dtype=th.int64).unsqueeze(-1),
+                        actions=self._actions_to_tensor(self._ep_actions),
                         rewards=th.as_tensor(self._ep_rewards, dtype=th.float32).unsqueeze(-1),
                         dones=th.as_tensor(self._ep_dones, dtype=th.bool).unsqueeze(-1),
                         next_states=th.from_numpy(np.asarray(self._ep_next_states, dtype=np.float32)),
@@ -111,10 +132,10 @@ class Runner:
             st += 1
             if st >= num_steps and not run_one_episode:
                 break
-            
+        
         batch = TransitionBatch(
             states=th.from_numpy(np.asarray(states, dtype=np.float32)),
-            actions=th.as_tensor(actions, dtype=th.int64).unsqueeze(-1),
+            actions=self._actions_to_tensor(actions),
             rewards=th.as_tensor(rewards, dtype=th.float32).unsqueeze(-1),
             dones=th.as_tensor(dones, dtype=th.bool).unsqueeze(-1),
             next_states=th.from_numpy(np.asarray(next_states, dtype=np.float32)),

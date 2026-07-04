@@ -14,8 +14,10 @@ class OffPolicyLearner:
     ):
         self.config = config
         self.device = th.device(config.device)
+
         self.model = model.to(self.device)
         self.optimizer = optimizer
+
         self.parameters = list(self.model.parameters())
         self.all_parameters = self.parameters
 
@@ -35,11 +37,7 @@ class OffPolicyLearner:
 
         self.target_model = None
         if self.use_target_model:
-            self.target_model = deepcopy(self.model)
-            self.target_model.to(self.device)
-            self.target_model.eval()
-            for parameter in self.target_model.parameters():
-                parameter.requires_grad = False
+            self.target_model = self._make_target_model(self.model)
 
     def _validate_config(self):
         if len(self.regularizers) != len(self.reg_lams):
@@ -51,15 +49,48 @@ class OffPolicyLearner:
             )
 
         if self.target_update == TargetUpdate.HARD and self.target_update_interval <= 0:
-            raise ValueError(
-                "target_update_interval must be > 0 for hard updates, "
-                f"got {self.target_update_interval}"
-            )
+            raise ValueError("target_update_interval must be > 0 for hard updates.")
 
         if self.target_update == TargetUpdate.SOFT and not (
             0.0 < self.soft_target_update_param <= 1.0
         ):
             raise ValueError("soft_target_update_param must be in (0, 1].")
+
+    def _make_target_model(self, model: th.nn.Module) -> th.nn.Module:
+        target = deepcopy(model).to(self.device)
+        target.eval()
+
+        for parameter in target.parameters():
+            parameter.requires_grad = False
+
+        return target
+
+    def _hard_update(self, target_model: th.nn.Module, model: th.nn.Module):
+        target_model.load_state_dict(model.state_dict())
+        target_model.eval()
+
+    def _soft_update(
+        self,
+        target_model: th.nn.Module,
+        model: th.nn.Module,
+    ):
+        tau = self.soft_target_update_param
+
+        with th.no_grad():
+            for target_parameter, model_parameter in zip(
+                target_model.parameters(),
+                model.parameters(),
+            ):
+                target_parameter.copy_(
+                    (1.0 - tau) * target_parameter + tau * model_parameter
+                )
+
+    def _hard_update_due(self) -> bool:
+        self.target_update_calls = (
+            self.target_update_calls + 1
+        ) % self.target_update_interval
+
+        return self.target_update_calls == 0
 
     def forward(self, states: th.Tensor, target: bool = False) -> th.Tensor:
         model = (
@@ -74,26 +105,12 @@ class OffPolicyLearner:
             return
 
         if self.target_update == TargetUpdate.HARD:
-            self.target_update_calls = (
-                self.target_update_calls + 1
-            ) % self.target_update_interval
-            if self.target_update_calls != 0:
-                return
-
-            self.target_model.load_state_dict(self.model.state_dict())
-            self.target_model.eval()
+            if self._hard_update_due():
+                self._hard_update(self.target_model, self.model)
             return
 
         if self.target_update == TargetUpdate.SOFT:
-            tau = self.soft_target_update_param
-            with th.no_grad():
-                for target_parameter, model_parameter in zip(
-                    self.target_model.parameters(),
-                    self.model.parameters(),
-                ):
-                    target_parameter.copy_(
-                        target_parameter * (1.0 - tau) + model_parameter * tau
-                    )
+            self._soft_update(self.target_model, self.model)
             return
 
         raise KeyError(f"Target model update unknown: {self.target_update}")
@@ -105,24 +122,55 @@ class OffPolicyLearner:
         states: th.Tensor,
         actions: th.Tensor,
         next_states: th.Tensor,
-    ):
+        model: th.nn.Module | None = None,
+    ) -> th.Tensor:
         if not self.regularizers:
-            return 0.0
+            return states.new_tensor(0.0)
 
-        return sum(
-            lam * regularizer(self.model, rewards, dones, states, actions, next_states)
-            for regularizer, lam in zip(self.regularizers, self.reg_lams)
-        )
+        if model is None:
+            model = self.model
 
-    def optimize(self, loss: th.Tensor):
-        self.optimizer.zero_grad(set_to_none=True)
+        loss = states.new_tensor(0.0)
+
+        for regularizer, lam in zip(self.regularizers, self.reg_lams):
+            value = regularizer(
+                model,
+                rewards,
+                dones,
+                states,
+                actions,
+                next_states,
+            )
+
+            if not th.is_tensor(value):
+                value = states.new_tensor(float(value))
+
+            loss = loss + lam * value
+
+        return loss
+
+    def optimize(
+        self,
+        loss: th.Tensor,
+        optimizer: th.optim.Optimizer | None = None,
+        parameters: list[th.nn.Parameter] | None = None,
+    ):
+        if optimizer is None:
+            optimizer = self.optimizer
+
+        if parameters is None:
+            parameters = self.parameters
+
+        optimizer.zero_grad(set_to_none=True)
         loss.backward()
+
         if self.clip_grad:
             th.nn.utils.clip_grad_norm_(
-                self.parameters,
+                parameters,
                 self.grad_norm_clip,
             )
-        self.optimizer.step()
+
+        optimizer.step()
 
     def requires_returns(self) -> bool:
         return False

@@ -3,7 +3,7 @@ import numpy as np
 import gymnasium as gym
 
 from drlab.replay import TransitionBatch
-from drlab.controllers import Controller
+from drlab.controllers import Controller, ContinuousActionController
 
 class Runner:
 
@@ -23,6 +23,12 @@ class Runner:
         self.gamma = gamma
         self.device = device
         self.continuous_actions = continuous_actions
+        
+        if continuous_actions and not isinstance(self.controller, ContinuousActionController):
+            raise TypeError(
+            "continuous_actions=True requires controller to be a ContinuousActionController."
+        )
+
         self.state, _ = self.env.reset()
         self.calculate_returns = calculate_returns
         self.return_last_episode = return_last_episode

@@ -78,7 +78,9 @@ from drlab import (
     ActorCriticLearner,
     OnPolicyExperiment,
     OnPolicyExperimentConfig,
+    ContinuousActionController,
     Controller,
+    DiscreteActionController,
     DQNConfig,
     DQNLearner,
     PPOConfig,
@@ -88,6 +90,7 @@ from drlab import (
     OffPolicyExperiment,
     OffPolicyExperimentConfig,
     EpsilonGreedyController,
+    GaussianController,
     GreedyController,
     ReplayBuffer,
     Runner,
@@ -101,7 +104,7 @@ They can also be imported from their subpackages:
 | Subpackage | Exports | Purpose |
 | --- | --- | --- |
 | `drlab.learners` | `DQNLearner`, `DQNConfig`, `ReinforceLearner`, `ActorCriticLearner`, `PPOLearner` and configs | Update PyTorch models from transition batches. |
-| `drlab.controllers` | `Controller`, `GreedyController`, `EpsilonGreedyController`, `StochasticController` | Convert model outputs into environment actions. |
+| `drlab.controllers` | `Controller`, `DiscreteActionController`, `ContinuousActionController`, `GreedyController`, `EpsilonGreedyController`, `StochasticController`, `GaussianController` | Convert model outputs into environment actions. |
 | `drlab.runners` | `Runner` | Collect transitions from a Gymnasium environment. |
 | `drlab.replay` | `ReplayBuffer`, `TransitionBatch` | Store, sample, move, and concatenate transitions. |
 | `drlab.experiments` | `OffPolicyExperiment`, `OffPolicyExperimentConfig`, `OnPolicyExperiment`, `OnPolicyExperimentConfig` | Run training loops with logging and progress bars. |
@@ -123,6 +126,8 @@ The package also includes reusable action-selection controllers:
 - `GreedyController`: deterministic argmax action selection from model scores.
 - `EpsilonGreedyController`: epsilon-greedy exploration with linear annealing.
 - `StochasticController`: samples actions from softmax probabilities.
+- `GaussianController`: samples bounded continuous actions from model-predicted
+  Gaussian parameters.
 
 ## Model Output Convention
 
@@ -134,6 +139,8 @@ Controllers and learners expect the model output to use a shared layout:
 - Actor-critic and PPO models should output at least `num_actions + 1` columns. The
   first `num_actions` columns are policy logits, and the next column is the
   value estimate.
+- Gaussian controllers expect `2 * action_dim` columns: means followed by
+  log standard deviations.
 
 ## Quick DQN Example
 
@@ -212,10 +219,15 @@ from drlab.learners import ReinforceLearner, ReinforceConfig, PPOLearner, PPOCon
 
 ### Controllers
 
-Controllers wrap a PyTorch model and expose:
+All controllers wrap a PyTorch model and expose:
 
 ```python
 action = controller.choose(obs)
+```
+
+Discrete action controllers also expose action probabilities:
+
+```python
 probs = controller.probabilities(obs)
 ```
 
@@ -225,6 +237,8 @@ Available controllers:
 - `EpsilonGreedyController`: wraps another controller and adds annealed random
   exploration.
 - `StochasticController`: samples actions from softmax probabilities.
+- `GaussianController`: samples continuous actions from Gaussian parameters and
+  squashes them into `[-1, 1]`.
 
 ### Runner
 

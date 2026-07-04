@@ -3,7 +3,10 @@ import unittest
 import torch as th
 
 from drlab.controllers import (
+    ContinuousActionController,
+    DiscreteActionController,
     EpsilonGreedyController,
+    GaussianController,
     GreedyController,
     StochasticController,
 )
@@ -18,7 +21,41 @@ class FixedLogits(th.nn.Module):
         return self.logits.unsqueeze(0).expand(obs.shape[0], -1)
 
 
+class FixedGaussianOutput(FixedLogits):
+    pass
+
+
 class ControllerTest(unittest.TestCase):
+    def test_discrete_controllers_share_discrete_base(self):
+        model = FixedLogits([0.1, 2.0, -1.0])
+        greedy = GreedyController(model, num_actions=3)
+        epsilon_greedy = EpsilonGreedyController(
+            greedy,
+            num_actions=3,
+            max_eps=0.0,
+            min_eps=0.0,
+            anneal_steps=2,
+        )
+        stochastic = StochasticController(model, num_actions=3)
+
+        self.assertIsInstance(greedy, DiscreteActionController)
+        self.assertIsInstance(epsilon_greedy, DiscreteActionController)
+        self.assertIsInstance(stochastic, DiscreteActionController)
+
+    def test_gaussian_controller_uses_continuous_base(self):
+        model = FixedGaussianOutput([0.0, 1.0, -3.0, -3.0])
+        controller = GaussianController(model, action_dim=2, deterministic=True)
+        obs = th.zeros(3, 2)
+
+        actions = controller.choose(obs)
+
+        self.assertIsInstance(controller, ContinuousActionController)
+        self.assertNotIsInstance(controller, DiscreteActionController)
+        self.assertEqual(actions.shape, (3, 2))
+        self.assertTrue(th.all(actions <= 1.0))
+        self.assertTrue(th.all(actions >= -1.0))
+        self.assertFalse(hasattr(controller, "probabilities"))
+
     def test_greedy_controller_selects_argmax_and_one_hot_probabilities(self):
         model = FixedLogits([0.1, 2.0, -1.0])
         controller = GreedyController(model, num_actions=3)

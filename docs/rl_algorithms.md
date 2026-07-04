@@ -41,6 +41,7 @@ dimension.
 | DQN and greedy controllers | At least `num_actions` columns. The first columns are action scores or Q-values. |
 | Actor-critic | At least `num_actions + 1` columns. The first columns are policy logits, and column `num_actions` is the value estimate. |
 | Stochastic controller | At least `num_actions` columns. The first columns are logits that are converted with `softmax`. |
+| Gaussian controller | At least `2 * action_dim` columns. The first columns are means and the next columns are log standard deviations. |
 
 For actor-critic, keep the value column even when value loss is disabled. Most
 configurations use it for bootstrapped advantages, TD value targets, or both.
@@ -401,6 +402,11 @@ exposes:
 
 ```python
 action = controller.choose(obs)
+```
+
+Discrete action controllers also expose:
+
+```python
 probs = controller.probabilities(obs)
 ```
 
@@ -468,6 +474,21 @@ Parameters:
 This is the natural controller for actor-critic training because it samples
 actions from the learned policy.
 
+### GaussianController
+
+`GaussianController(model, action_dim)` reads means and log standard deviations
+from the model output, samples a Gaussian action, and squashes it with `tanh`.
+It is a `ContinuousActionController`, so it exposes `choose(obs)` but not
+`probabilities(obs)`.
+
+Parameters:
+
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `model` | Required | PyTorch model used to produce Gaussian parameters. |
+| `action_dim` | Required | Number of continuous action dimensions. |
+| `deterministic` | `False` | Uses the mean action instead of sampling when `True`. |
+
 ## Runner
 
 `Runner` collects transitions from a Gymnasium environment with a controller.
@@ -486,6 +507,7 @@ Constructor parameters:
 | `return_last_episode` | `True` | Returns the latest complete episode as a separate `TransitionBatch`. |
 | `gamma` | `0.99` | Discount used for return calculation. |
 | `device` | `"cpu"` | Device used for observations passed to the controller. |
+| `continuous_actions` | `False` | Converts controller outputs to clipped NumPy action vectors for continuous environments. |
 
 `run(num_steps)` behavior:
 

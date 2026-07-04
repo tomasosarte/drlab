@@ -36,3 +36,8 @@ class DQNConfig(OffPolicyConfig):
     criterion: th.nn.Module = field(default_factory=th.nn.MSELoss)
     double_q: bool = True
     num_actions: int = 2
+
+
+@dataclass
+class SACConfig(OffPolicyConfig):
+    target_entropy: float | None = None

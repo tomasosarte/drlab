@@ -1,6 +1,9 @@
 from drlab.controllers import (
+    ContinuousActionController,
     Controller,
+    DiscreteActionController,
     EpsilonGreedyController,
+    GaussianController,
     GreedyController,
     StochasticController,
 )
@@ -37,7 +40,9 @@ __all__ = [
     "ActorCriticLearner",
     "OnPolicyExperiment",
     "OnPolicyExperimentConfig",
+    "ContinuousActionController",
     "Controller",
+    "DiscreteActionController",
     "DQNConfig",
     "DQNLearner",
     "OnPolicyConfig",
@@ -52,6 +57,7 @@ __all__ = [
     "ReinforceLearner",
     "TargetUpdate",
     "EpsilonGreedyController",
+    "GaussianController",
     "GreedyController",
     "ReplayBuffer",
     "Runner",

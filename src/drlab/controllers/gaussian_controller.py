@@ -1,9 +1,15 @@
 import torch as th
-from .base import Controller
+from .base import ContinuousActionController
 
-class GaussianController(Controller):
 
-    def __init__(self, model: th.nn.Module, action_dim: int, deterministic: bool = False):
+class GaussianController(ContinuousActionController):
+
+    def __init__(
+        self,
+        model: th.nn.Module,
+        action_dim: int,
+        deterministic: bool = False,
+    ):
         self.model = model
         self.action_dim = action_dim
         self.num_actions = action_dim
@@ -24,6 +30,3 @@ class GaussianController(Controller):
             u = mean + std * eps
 
         return th.tanh(u)
-
-    def probabilities(self, obs: th.Tensor, **kwargs) -> th.Tensor:
-        raise NotImplementedError("Continuous actions do not use probabilities().")

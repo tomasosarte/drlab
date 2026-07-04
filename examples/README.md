@@ -13,6 +13,14 @@ python examples/actor_critic_cartpole.py
 python examples/ppo_cartpole.py
 ```
 
+There is also a comparison script that trains drlab DQN and Stable-Baselines3
+DQN for the same number of `CartPole-v1` steps and evaluates both policies:
+
+```bash
+python -m pip install stable-baselines3
+python examples/compare_drlab_stable_baselines3.py --steps 10000
+```
+
 TensorBoard logs are written under `runs/examples/`.
 
 ```bash

@@ -2,10 +2,10 @@ import numpy as np
 from tqdm import tqdm
 import gymnasium as gym
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Tuple
 from torch.utils.tensorboard import SummaryWriter
 
-from drlab.learners import OffPolicyLearner
+from drlab.learners import OffPolicyLearner, SACLearner
 from drlab.runners import Runner
 from drlab.controllers import Controller
 from drlab.replay import TransitionBatch, ReplayBuffer
@@ -24,6 +24,7 @@ class OffPolicyExperimentConfig:
     grad_repeats: int = 1
     step_callback: Callable[[int], None] | None = None
     step_callback_interval: int | None = None
+    action_shape: Tuple[int, ...] = (1,)
 
 
 class OffPolicyExperiment:
@@ -46,7 +47,8 @@ class OffPolicyExperiment:
         self.step_callback_interval = config.step_callback_interval
 
         # Init drl components
-        self.runner = Runner(env, controller, False, True, config.gamma, learner.device)
+        continous_actions = isinstance(learner, SACLearner)
+        self.runner = Runner(env, controller, False, True, config.gamma, learner.device, continous_actions)
         self.learner = learner
 
         # Init replay buffer
@@ -55,7 +57,8 @@ class OffPolicyExperiment:
         self.replay_buffer = ReplayBuffer(
             capacity=config.replay_buffer_size if config.use_replay else config.batch_size,  
             obs_shape=env.observation_space.shape,
-            device=learner.device
+            device=learner.device,
+            continuous_actions=continous_actions
         )
 
         # Init logging

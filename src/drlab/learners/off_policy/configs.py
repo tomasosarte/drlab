@@ -45,18 +45,12 @@ class SACConfig(OffPolicyConfig):
     criterion: th.nn.Module = field(default_factory=th.nn.MSELoss)
 
     # Entropy temperature
-    alpha: float = 0.2
-    auto_entropy_tuning: bool = True
-    alpha_lr: float = 3e-4
     target_entropy: float | None = None
+    alpha_lr: float = 3e-4
 
     # Gaussian policy stability
     min_log_std: float = -20.0
     max_log_std: float = 2.0
-
-    # Optional alpha stability
-    min_log_alpha: float = -20.0
-    max_log_alpha: float = 2.0
 
     @property
     def action_dim(self) -> int:
@@ -68,14 +62,8 @@ class SACConfig(OffPolicyConfig):
         if self.action_dim <= 0:
             raise ValueError("action_dim must be > 0.")
 
-        if self.alpha <= 0.0:
-            raise ValueError("alpha must be > 0.")
-
         if self.alpha_lr <= 0.0:
             raise ValueError("alpha_lr must be > 0.")
 
         if self.min_log_std >= self.max_log_std:
             raise ValueError("min_log_std must be < max_log_std.")
-
-        if self.min_log_alpha >= self.max_log_alpha:
-            raise ValueError("min_log_alpha must be < max_log_alpha.")

@@ -1,6 +1,7 @@
 import torch as th
+from math import prod
 from enum import Enum
-from typing import Callable
+from typing import Callable, Tuple
 from dataclasses import dataclass, field
 
 
@@ -26,6 +27,8 @@ class OffPolicyConfig:
     target_update_interval: int = 100
     soft_target_update_param: float = 0.1
 
+    action_shape: Tuple[int, ...] = (1,)
+
     def __post_init__(self):
         if isinstance(self.target_update, str):
             self.target_update = TargetUpdate(self.target_update)
@@ -37,7 +40,42 @@ class DQNConfig(OffPolicyConfig):
     double_q: bool = True
     num_actions: int = 2
 
-
 @dataclass
 class SACConfig(OffPolicyConfig):
+    criterion: th.nn.Module = field(default_factory=th.nn.MSELoss)
+
+    # Entropy temperature
+    alpha: float = 0.2
+    auto_entropy_tuning: bool = True
+    alpha_lr: float = 3e-4
     target_entropy: float | None = None
+
+    # Gaussian policy stability
+    min_log_std: float = -20.0
+    max_log_std: float = 2.0
+
+    # Optional alpha stability
+    min_log_alpha: float = -20.0
+    max_log_alpha: float = 2.0
+
+    @property
+    def action_dim(self) -> int:
+        return int(prod(self.action_shape))
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        if self.action_dim <= 0:
+            raise ValueError("action_dim must be > 0.")
+
+        if self.alpha <= 0.0:
+            raise ValueError("alpha must be > 0.")
+
+        if self.alpha_lr <= 0.0:
+            raise ValueError("alpha_lr must be > 0.")
+
+        if self.min_log_std >= self.max_log_std:
+            raise ValueError("min_log_std must be < max_log_std.")
+
+        if self.min_log_alpha >= self.max_log_alpha:
+            raise ValueError("min_log_alpha must be < max_log_alpha.")

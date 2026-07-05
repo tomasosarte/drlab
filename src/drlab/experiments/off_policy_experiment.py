@@ -24,7 +24,6 @@ class OffPolicyExperimentConfig:
     grad_repeats: int = 1
     step_callback: Callable[[int], None] | None = None
     step_callback_interval: int | None = None
-    action_shape: Tuple[int, ...] = (1,)
 
 
 class OffPolicyExperiment:
@@ -58,7 +57,8 @@ class OffPolicyExperiment:
             capacity=config.replay_buffer_size if config.use_replay else config.batch_size,  
             obs_shape=env.observation_space.shape,
             device=learner.device,
-            continuous_actions=continous_actions
+            continuous_actions=continous_actions,
+            action_shape=learner.config.action_shape
         )
 
         # Init logging

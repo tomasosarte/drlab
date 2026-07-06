@@ -1,25 +1,32 @@
 from __future__ import annotations
+import numpy as np
 import torch as th
 from dataclasses import dataclass
 
 @dataclass
 class TransitionBatch:
-    states: th.Tensor       # [B, obs_dim]
-    actions: th.Tensor      # [B, 1] (long)
-    rewards: th.Tensor      # [B, 1] (float)
-    dones: th.Tensor        # [B, 1] (bool)
-    next_states: th.Tensor  # [B, obs_dim]
-    returns: th.Tensor      # [B, 1] (float)
+    states: th.Tensor | np.ndarray       # [B, obs_dim]
+    actions: th.Tensor | np.ndarray      # [B, 1] (int64/float32)
+    rewards: th.Tensor | np.ndarray      # [B, 1] (float)
+    dones: th.Tensor | np.ndarray        # [B, 1] (bool)
+    next_states: th.Tensor | np.ndarray  # [B, obs_dim]
+    returns: th.Tensor | np.ndarray      # [B, 1] (float)
 
     def to(self, device: th.device | str) -> TransitionBatch:
         d = th.device(device)
+
+        def move(value: th.Tensor | np.ndarray) -> th.Tensor:
+            if isinstance(value, np.ndarray):
+                return th.from_numpy(value).to(d)
+            return value.to(d)
+
         return TransitionBatch(
-            states=self.states.to(d),
-            actions=self.actions.to(d),
-            rewards=self.rewards.to(d),
-            dones=self.dones.to(d),
-            next_states=self.next_states.to(d),
-            returns=self.returns.to(d),
+            states=move(self.states),
+            actions=move(self.actions),
+            rewards=move(self.rewards),
+            dones=move(self.dones),
+            next_states=move(self.next_states),
+            returns=move(self.returns),
         )
 
     def cat(self, other: TransitionBatch) -> TransitionBatch:

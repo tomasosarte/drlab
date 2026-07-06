@@ -5,30 +5,30 @@ from dataclasses import dataclass
 from typing import Callable
 from torch.utils.tensorboard import SummaryWriter
 
-from drlab.learners import ActorCritic
+from drlab.learners import OnPolicyLearner
 from drlab.runners import Runner
 from drlab.controllers import Controller
 
 
 @dataclass
-class ActorCriticExperimentConfig:
+class OnPolicyExperimentConfig:
     max_steps: int
     gamma: float = 0.99
     run_steps: int = 0
-    log_dir: str = "runs/reinforce_experiment"
-    experiment_name: str = "ActorCriticExperiment"
+    log_dir: str = "runs/on_policy_experiment"
+    experiment_name: str = "OnPolicyExperiment"
     step_callback: Callable[[int], None] | None = None
     step_callback_interval: int | None = None
 
 
-class ActorCriticExperiment:
+class OnPolicyExperiment:
 
     def __init__(
         self,
         env: gym.Env,
         controller: Controller,
-        learner: ActorCritic,
-        config: ActorCriticExperimentConfig,
+        learner: OnPolicyLearner,
+        config: OnPolicyExperimentConfig,
     ):  
         # Init experiment settings
         self.max_steps = config.max_steps
@@ -36,11 +36,7 @@ class ActorCriticExperiment:
         self.step_callback = config.step_callback
         self.step_callback_interval = config.step_callback_interval
         
-        # Only ask the runner to compute discounted returns when the learner uses them.
-        calculate_returns = (
-            not learner.config.advantage_bootstrap
-            or (learner.config.use_bias and learner.config.value_targets == "returns")
-        )
+        calculate_returns = learner.requires_returns()
 
         # Init drl components
         self.runner = Runner(env, controller, calculate_returns, False, config.gamma, learner.device)

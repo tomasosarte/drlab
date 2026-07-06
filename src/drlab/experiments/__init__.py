@@ -1,9 +1,9 @@
-from .dqn_experiment import DQNExperiment, DQNExperimentConfig
-from .ac_experiment import ActorCriticExperiment, ActorCriticExperimentConfig
+from .off_policy_experiment import OffPolicyExperiment, OffPolicyExperimentConfig
+from .on_policy_experiment import OnPolicyExperiment, OnPolicyExperimentConfig
 
 __all__ = [
-    "DQNExperimentConfig", 
-    "DQNExperiment", 
-    "ActorCriticExperimentConfig", 
-    "ActorCriticExperiment"
+    "OffPolicyExperiment", 
+    "OnPolicyExperiment",
+    "OffPolicyExperimentConfig", 
+    "OnPolicyExperimentConfig",
 ]

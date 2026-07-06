@@ -1,22 +1,44 @@
 # drlab
 
-`drlab` is a small deep reinforcement learning package for research code and
-experiments. It provides reusable building blocks for Gymnasium environments:
+`drlab` is a small deep reinforcement learning library for training neural
+network agents in Gymnasium environments. Its purpose is to provide simple,
+research-friendly building blocks for reinforcement learning experiments,
+especially when the environment or training setup is still being explored.
 
-- DQN and actor-critic learners
-- greedy, epsilon-greedy, and stochastic controllers
-- a transition runner for collecting environment interaction
-- replay buffer and transition batch utilities
-- lightweight experiment wrappers with TensorBoard logging
-
-The package is designed around small, composable pieces: a PyTorch model,
-controller, runner, learner, and optionally an experiment wrapper.
+The library is built around PyTorch models, Gymnasium environments, reusable
+controllers, replay buffers, runners, learners, and lightweight experiment
+loops. It is intended for research code and prototypes, not as a large
+production RL framework.
 
 ## Installation
 
-From the repository root:
+The intended development setup uses [`uv`](https://docs.astral.sh/uv/). From the
+repository root:
 
 ```bash
+uv sync --extra experiments --extra dev
+```
+
+Run commands through the managed environment:
+
+```bash
+uv run python -m pytest
+uv run python examples/dqn_cartpole.py
+```
+
+You can also activate the local virtual environment created by `uv`:
+
+```bash
+source .venv/bin/activate
+python -m pytest
+```
+
+If you prefer a normal `venv` and `pip` workflow:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
 python -m pip install -e .
 ```
 
@@ -26,216 +48,124 @@ For experiment and development dependencies:
 python -m pip install -e ".[experiments,dev]"
 ```
 
-## Package Overview
+`drlab` depends on PyTorch, NumPy, Gymnasium, tqdm, and TensorBoard. If you need
+a specific CUDA build of PyTorch, install the matching PyTorch wheel before
+installing the package dependencies.
 
-Public classes are available from the package root:
+## Library Overview
+
+Most public classes can be imported directly from `drlab`:
 
 ```python
-from drlab import (
-    ActorCritic,
-    ActorCriticConfig,
-    ActorCriticExperiment,
-    ActorCriticExperimentConfig,
-    Controller,
-    DQN,
-    DQNConfig,
-    DQNExperiment,
-    DQNExperimentConfig,
-    EpsilonGreedyController,
-    GreedyController,
-    ReplayBuffer,
-    Runner,
-    StochasticController,
-    TransitionBatch,
-)
+from drlab import DQNConfig, DQNLearner, OffPolicyExperiment
 ```
 
-They can also be imported from their subpackages:
+### Off-Policy Learning
 
-| Subpackage | Exports | Purpose |
-| --- | --- | --- |
-| `drlab.learners` | `DQN`, `DQNConfig`, `ActorCritic`, `ActorCriticConfig` | Update PyTorch models from transition batches. |
-| `drlab.controllers` | `Controller`, `GreedyController`, `EpsilonGreedyController`, `StochasticController` | Convert model outputs into environment actions. |
-| `drlab.runners` | `Runner` | Collect transitions from a Gymnasium environment. |
-| `drlab.replay` | `ReplayBuffer`, `TransitionBatch` | Store, sample, move, and concatenate transitions. |
-| `drlab.experiments` | `DQNExperiment`, `DQNExperimentConfig`, `ActorCriticExperiment`, `ActorCriticExperimentConfig` | Run training loops with logging and progress bars. |
+Off-policy learners train from transition batches that may come from a replay
+buffer instead of only the most recent rollout. `OffPolicyExperiment` collects
+environment transitions with a `Runner`, stores them in a `ReplayBuffer`, samples
+minibatches, and calls the learner update.
 
-## Implemented Algorithms
+Implemented off-policy learners:
 
-For a detailed explanation of each algorithm, training flow, and configuration
-parameter, see [RL Algorithms and Parameters](docs/rl_algorithms.md).
+- `DQNLearner`: value-based learning for discrete action spaces. It supports
+  replay-buffer training, target networks, Double DQN, hard or soft target
+  updates, gradient clipping, and custom regularizers.
+- `SACLearner`: Soft Actor-Critic style learning for continuous action spaces.
+  It uses an actor, two critics, target critics, entropy tuning, and replay
+  buffer training.
 
-| Algorithm | Type | Implementation Summary |
-| --- | --- | --- |
-| DQN | Off-policy value-based RL | Trains a Q-network with one-step TD targets from `(state, action, reward, done, next_state)` batches. It supports replay-buffer training through `DQNExperiment`, target networks, Double DQN action selection, hard or soft target-network updates, gradient clipping, configurable discounting, and custom regularizers. |
-| Actor-Critic | On-policy policy-gradient RL | Trains a shared policy/value network from transition batches and returns. The policy head is optimized with advantage-weighted log probabilities, while the value head can use TD targets or full returns. It supports bootstrapped advantages, optional baseline subtraction, advantage normalization, entropy regularization with annealing, gradient clipping, custom regularizers, and PPO-style clipped policy updates for extra optimization passes. |
+### On-Policy Learning
 
-The package also includes reusable action-selection controllers:
+On-policy learners train from the data collected by the current policy.
+`OnPolicyExperiment` collects rollouts, computes returns when needed, and trains
+the learner directly on the fresh batch.
 
-- `GreedyController`: deterministic argmax action selection from model scores.
-- `EpsilonGreedyController`: epsilon-greedy exploration with linear annealing.
-- `StochasticController`: samples actions from softmax probabilities.
+Implemented on-policy learners:
 
-## Model Output Convention
+- `ReinforceLearner`: policy-gradient learning from discounted returns.
+- `ActorCriticLearner`: policy and value learning from shared model outputs.
+- `PPOLearner`: clipped policy optimization over rollout batches.
 
-Controllers and learners expect the model output to use a shared layout:
+### Supporting Components
 
-- DQN models should output at least `num_actions` columns. The first
-  `num_actions` columns are treated as action scores.
-- Actor-critic models should output at least `num_actions + 1` columns. The
-  first `num_actions` columns are policy logits, and the next column is the
-  value estimate.
+Controllers turn model outputs into environment actions:
 
-## Quick DQN Example
+- `GreedyController`, `EpsilonGreedyController`, and `StochasticController`
+  support discrete action spaces.
+- `GaussianController` supports continuous action spaces by sampling bounded
+  actions from model-predicted Gaussian parameters.
+
+`Runner` interacts with Gymnasium environments and returns transition batches,
+episode returns, episode lengths, and optionally the last completed episode.
+
+`ReplayBuffer` stores transitions for off-policy learning. It supports both
+discrete and continuous action spaces through the configured action shape and
+action type.
+
+`TransitionBatch` is the tensor container passed between runners, replay
+buffers, experiments, and learners.
+
+## Simple Usage
+
+This example trains a DQN agent on `CartPole-v1`:
 
 ```python
 import gymnasium as gym
 import torch as th
 
 from drlab import (
-    DQN,
     DQNConfig,
-    DQNExperiment,
-    DQNExperimentConfig,
+    DQNLearner,
     EpsilonGreedyController,
     GreedyController,
+    OffPolicyExperiment,
+    OffPolicyExperimentConfig,
 )
 
 env = gym.make("CartPole-v1")
 
+obs_dim = env.observation_space.shape[0]
+num_actions = env.action_space.n
+
 model = th.nn.Sequential(
-    th.nn.Linear(4, 64),
+    th.nn.Linear(obs_dim, 64),
     th.nn.ReLU(),
-    th.nn.Linear(64, 2),
+    th.nn.Linear(64, num_actions),
 )
 optimizer = th.optim.Adam(model.parameters(), lr=1e-3)
 
-learner = DQN(model, optimizer, DQNConfig(num_actions=2))
+learner = DQNLearner(
+    model,
+    optimizer,
+    DQNConfig(num_actions=num_actions),
+)
+
 controller = EpsilonGreedyController(
-    GreedyController(model, num_actions=2),
-    num_actions=2,
+    GreedyController(model, num_actions=num_actions),
+    num_actions=num_actions,
     max_eps=1.0,
     min_eps=0.05,
     anneal_steps=10_000,
 )
 
-experiment = DQNExperiment(
+experiment = OffPolicyExperiment(
     env,
     controller,
     learner,
-    DQNExperimentConfig(
-        max_steps=20_000,
+    OffPolicyExperimentConfig(
+        max_steps=10_000,
         run_steps=1,
-        batch_size=128,
-        log_dir="runs/cartpole_dqn",
+        batch_size=64,
+        log_dir="runs/examples/dqn_cartpole",
     ),
 )
+
 experiment.run()
+env.close()
 ```
 
-## Core Components
-
-### Learners
-
-`DQN` trains a Q-network from `(rewards, dones, states, actions, next_states)`.
-Its config supports target networks, double Q-learning, hard or soft target
-updates, gradient clipping, discounting, and custom regularizers.
-
-```python
-from drlab.learners import DQN, DQNConfig
-```
-
-`ActorCritic` trains a policy/value network from transition batches with
-returns. Its config supports TD or return-based value targets, bootstrapped
-advantages, PPO-style clipping, entropy regularization, advantage
-normalization, and custom regularizers.
-
-```python
-from drlab.learners import ActorCritic, ActorCriticConfig
-```
-
-### Controllers
-
-Controllers wrap a PyTorch model and expose:
-
-```python
-action = controller.choose(obs)
-probs = controller.probabilities(obs)
-```
-
-Available controllers:
-
-- `GreedyController`: selects the highest-scoring action.
-- `EpsilonGreedyController`: wraps another controller and adds annealed random
-  exploration.
-- `StochasticController`: samples actions from softmax probabilities.
-
-### Runner
-
-`Runner` steps through a Gymnasium environment with a controller and returns:
-
-```python
-batch, ep_returns, ep_lengths, last_episode = runner.run(num_steps)
-```
-
-`num_steps <= 0` collects one complete episode. Positive values collect up to
-that many transitions. The returned `batch` is a `TransitionBatch`.
-
-### Replay
-
-`TransitionBatch` stores tensors for:
-
-- `states`
-- `actions`
-- `rewards`
-- `dones`
-- `next_states`
-- `returns`
-
-It provides `.to(device)` and `.cat(other)` helpers.
-
-`ReplayBuffer` stores fixed-capacity NumPy arrays and returns sampled or full
-data as `TransitionBatch` instances:
-
-```python
-buffer = ReplayBuffer(capacity=10_000, obs_shape=env.observation_space.shape)
-batch = buffer.sample(128)
-all_data = buffer.get_all()
-```
-
-### Experiments
-
-Experiment wrappers combine an environment, controller, learner, runner, replay
-buffer behavior, progress bar, and TensorBoard logging.
-
-```python
-from drlab.experiments import (
-    ActorCriticExperiment,
-    ActorCriticExperimentConfig,
-    DQNExperiment,
-    DQNExperimentConfig,
-)
-```
-
-Use `DQNExperiment` for off-policy DQN training and `ActorCriticExperiment` for
-on-policy actor-critic training.
-
-## Development
-
-Install development dependencies:
-
-```bash
-python -m pip install -e ".[dev]"
-```
-
-Run the test suite:
-
-```bash
-python -m unittest discover -v
-```
-
-Build a wheel:
-
-```bash
-python -m build --wheel
-```
+More complete scripts are available in the [`examples/`](examples/) folder,
+including DQN, REINFORCE, actor-critic, PPO, SAC, and a comparison with
+Stable-Baselines3.

@@ -1,36 +1,71 @@
 from drlab.controllers import (
+    ContinuousActionController,
     Controller,
+    DiscreteActionController,
     EpsilonGreedyController,
+    GaussianController,
     GreedyController,
     StochasticController,
 )
 from drlab.experiments import (
-    ActorCriticExperiment,
-    ActorCriticExperimentConfig,
-    DQNExperiment,
-    DQNExperimentConfig,
+    OnPolicyExperiment,
+    OnPolicyExperimentConfig,
+    OffPolicyExperiment,
+    OffPolicyExperimentConfig,
 )
-from drlab.learners import ActorCritic, ActorCriticConfig, DQN, DQNConfig
+from drlab.learners import (
+    ActorCriticConfig,
+    ActorCriticLearner,
+    DQNConfig,
+    DQNLearner,
+    SACConfig,
+    SACLearner,
+    OnPolicyConfig,
+    OnPolicyLearner,
+    OffPolicyConfig,
+    OffPolicyLearner,
+    PPOConfig,
+    PPOLearner,
+    ReinforceConfig,
+    ReinforceLearner,
+    TargetUpdate,
+    ValueTargets,
+)
 from drlab.replay import ReplayBuffer, TransitionBatch
 from drlab.runners import Runner
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "__version__",
-    "ActorCritic",
     "ActorCriticConfig",
-    "ActorCriticExperiment",
-    "ActorCriticExperimentConfig",
+    "ActorCriticLearner",
+    "OnPolicyExperiment",
+    "OnPolicyExperimentConfig",
+    "ContinuousActionController",
     "Controller",
-    "DQN",
+    "DiscreteActionController",
     "DQNConfig",
-    "DQNExperiment",
-    "DQNExperimentConfig",
+    "DQNLearner",
+    "SACConfig",
+    "SACLearner",
+    "OnPolicyConfig",
+    "OnPolicyLearner",
+    "OffPolicyConfig",
+    "OffPolicyLearner",
+    "OffPolicyExperiment",
+    "OffPolicyExperimentConfig",
+    "PPOConfig",
+    "PPOLearner",
+    "ReinforceConfig",
+    "ReinforceLearner",
+    "TargetUpdate",
     "EpsilonGreedyController",
+    "GaussianController",
     "GreedyController",
     "ReplayBuffer",
     "Runner",
     "StochasticController",
     "TransitionBatch",
+    "ValueTargets",
 ]

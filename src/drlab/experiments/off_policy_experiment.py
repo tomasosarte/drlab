@@ -2,21 +2,21 @@ import numpy as np
 from tqdm import tqdm
 import gymnasium as gym
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Tuple
 from torch.utils.tensorboard import SummaryWriter
 
-from drlab.learners import DQN
+from drlab.learners import OffPolicyLearner, SACLearner
 from drlab.runners import Runner
 from drlab.controllers import Controller
 from drlab.replay import TransitionBatch, ReplayBuffer
 
 @dataclass
-class DQNExperimentConfig:
+class OffPolicyExperimentConfig:
     max_steps: int
     gamma: float = 0.99
     run_steps: int = 0
-    log_dir: str = "runs/dqn_experiment"
-    experiment_name: str = "DQNExperiment"
+    log_dir: str = "runs/off_policy_experiment"
+    experiment_name: str = "OffPolicyExperiment"
     use_replay: bool = True
     replay_buffer_size: int = 10_000
     batch_size: int = 128
@@ -26,14 +26,14 @@ class DQNExperimentConfig:
     step_callback_interval: int | None = None
 
 
-class DQNExperiment:
+class OffPolicyExperiment:
 
     def __init__(
             self,
             env: gym.Env,
             controller: Controller,
-            learner: DQN,
-            config: DQNExperimentConfig,
+            learner: OffPolicyLearner,
+            config: OffPolicyExperimentConfig,
         ):
 
         # Init experiment settings
@@ -46,7 +46,16 @@ class DQNExperiment:
         self.step_callback_interval = config.step_callback_interval
 
         # Init drl components
-        self.runner = Runner(env, controller, False, True, config.gamma, learner.device)
+        continous_actions = isinstance(learner, SACLearner)
+        self.runner = Runner(
+            env,
+            controller,
+            False,
+            config.use_last_episode,
+            config.gamma,
+            learner.device,
+            continous_actions,
+        )
         self.learner = learner
 
         # Init replay buffer
@@ -55,7 +64,9 @@ class DQNExperiment:
         self.replay_buffer = ReplayBuffer(
             capacity=config.replay_buffer_size if config.use_replay else config.batch_size,  
             obs_shape=env.observation_space.shape,
-            device=learner.device
+            device=learner.device,
+            continuous_actions=continous_actions,
+            action_shape=learner.config.action_shape
         )
 
         # Init logging
@@ -89,12 +100,12 @@ class DQNExperiment:
     def _learn_from_batch(self, batch: TransitionBatch, last_episode: TransitionBatch | None) -> float:
         # 1) Add batch to replay buffer
         self.replay_buffer.add(
-            states=batch.states.cpu().numpy(),
-            actions=batch.actions.cpu().numpy(),
-            rewards=batch.rewards.cpu().numpy(),
-            dones=batch.dones.cpu().numpy(),
-            next_states=batch.next_states.cpu().numpy(),
-            returns=batch.returns.cpu().numpy(),
+            states=batch.states,
+            actions=batch.actions,
+            rewards=batch.rewards,
+            dones=batch.dones,
+            next_states=batch.next_states,
+            returns=batch.returns,
         )
         if self.replay_buffer.size < self.batch_size:
             return 0.0
@@ -119,7 +130,10 @@ class DQNExperiment:
         while steps < self.max_steps:
 
             # 1. Run batch of transitions
-            batch, ep_returns, ep_lengths, last_episode = self.runner.run(self.run_steps)
+            batch, ep_returns, ep_lengths, last_episode = self.runner.run(
+                self.run_steps,
+                as_numpy=True,
+            )
 
             # 2. Learn from batch
             loss = self._learn_from_batch(batch, last_episode)

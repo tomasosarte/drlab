@@ -23,6 +23,23 @@ class TransitionBatchTest(unittest.TestCase):
         self.assertEqual(moved.states.device.type, "cpu")
         self.assertTrue(th.equal(moved.actions, batch.actions))
 
+    def test_to_converts_numpy_fields_to_tensors(self):
+        batch = TransitionBatch(
+            states=np.zeros((2, 3), dtype=np.float32),
+            actions=np.zeros((2, 1), dtype=np.int64),
+            rewards=np.ones((2, 1), dtype=np.float32),
+            dones=np.zeros((2, 1), dtype=np.bool_),
+            next_states=np.ones((2, 3), dtype=np.float32),
+            returns=np.full((2, 1), 2.0, dtype=np.float32),
+        )
+
+        moved = batch.to("cpu")
+
+        self.assertEqual(moved.states.dtype, th.float32)
+        self.assertEqual(moved.actions.dtype, th.int64)
+        self.assertEqual(moved.dones.dtype, th.bool)
+        self.assertTrue(th.equal(moved.returns, th.full((2, 1), 2.0)))
+
     def test_cat_concatenates_every_field(self):
         first = TransitionBatch(
             states=th.zeros(1, 2),

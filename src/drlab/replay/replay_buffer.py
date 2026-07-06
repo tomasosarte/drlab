@@ -10,15 +10,22 @@ class ReplayBuffer:
         self,
         capacity: int,
         obs_shape: Tuple[int, ...],
+        action_shape: Tuple[int, ...] = (1,),
+        continuous_actions: bool = False,
         device: th.device | str = "cpu",
     ):
         self.capacity = int(capacity)
         self.device = th.device(device)
         self.obs_shape = obs_shape
+        self.action_shape = action_shape
+        self.continuous_actions = continuous_actions
 
         self.states = np.zeros((capacity, *obs_shape), dtype=np.float32)
         self.next_states = np.zeros((capacity, *obs_shape), dtype=np.float32)
-        self.actions = np.zeros((capacity, 1), dtype=np.int64)
+
+        action_dtype = np.float32 if continuous_actions else np.int64
+        self.actions = np.zeros((capacity, *action_shape), dtype=action_dtype)
+
         self.rewards = np.zeros((capacity, 1), dtype=np.float32)
         self.dones = np.zeros((capacity, 1), dtype=np.bool_)
         self.returns = np.zeros((capacity, 1), dtype=np.float32)
@@ -44,10 +51,13 @@ class ReplayBuffer:
         assert next_states.shape[1:] == self.obs_shape
         assert B <= self.capacity, f"Batch size B={B} must be <= capacity={self.capacity}"
 
-        actions = np.asarray(actions).reshape(B, 1).astype(np.int64)
-        rewards = np.asarray(rewards).reshape(B, 1).astype(np.float32)
-        dones   = np.asarray(dones).reshape(B, 1).astype(np.bool_)
-        returns = np.asarray(returns).reshape(B, 1).astype(np.float32)
+        if self.continuous_actions:
+            actions = np.asarray(actions, dtype=np.float32).reshape(B, *self.action_shape)
+        else:
+            actions = np.asarray(actions, dtype=np.int64).reshape(B, 1)
+        rewards = np.asarray(rewards, dtype=np.float32).reshape(B, 1)
+        dones = np.asarray(dones, dtype=np.bool_).reshape(B, 1)
+        returns = np.asarray(returns, dtype=np.float32).reshape(B, 1)
 
         idx = (self.ptr + np.arange(B)) % self.capacity
 

@@ -105,8 +105,9 @@ class SACLearner(OffPolicyLearner):
         with th.no_grad():
             next_actions, next_log_probs = self.sample_action_and_log_prob(next_states)
 
-            target_q1 = self.critic1_target(th.cat([next_states, next_actions], dim=-1))
-            target_q2 = self.critic2_target(th.cat([next_states, next_actions], dim=-1))
+            next_action_states = th.cat([next_states, next_actions], dim=-1)
+            target_q1 = self.critic1_target(next_action_states)
+            target_q2 = self.critic2_target(next_action_states)
             target_q = th.min(target_q1, target_q2)
 
             not_done = 1.0 - dones.float()
@@ -114,8 +115,9 @@ class SACLearner(OffPolicyLearner):
                 not_done * (target_q - self.alpha.detach() * next_log_probs)
             )
 
-        current_q1 = self.critic1(th.cat([states, actions], dim=-1))
-        current_q2 = self.critic2(th.cat([states, actions], dim=-1))
+        action_states = th.cat([states, actions], dim=-1)
+        current_q1 = self.critic1(action_states)
+        current_q2 = self.critic2(action_states)
 
         critic1_loss = self.criterion(current_q1, targets)
         critic2_loss = self.criterion(current_q2, targets)
@@ -138,8 +140,9 @@ class SACLearner(OffPolicyLearner):
         self._set_requires_grad(self.critic2, False)
         
         new_actions, log_probs = self.sample_action_and_log_prob(states)
-        new_q1 = self.critic1(th.cat([states, new_actions], dim=-1))
-        new_q2 = self.critic2(th.cat([states, new_actions], dim=-1))
+        new_action_states = th.cat([states, new_actions], dim=-1)
+        new_q1 = self.critic1(new_action_states)
+        new_q2 = self.critic2(new_action_states)
         new_q = th.min(new_q1, new_q2)
 
         actor_loss = (self.alpha.detach() * log_probs - new_q).mean()

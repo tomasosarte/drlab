@@ -36,7 +36,7 @@ class PublicAPITest(unittest.TestCase):
             "ValueTargets",
         }
 
-        self.assertEqual(drlab.__version__, "0.2.0")
+        self.assertEqual(drlab.__version__, "0.2.1")
         self.assertTrue(expected.issubset(set(drlab.__all__)))
         for name in expected:
             self.assertTrue(hasattr(drlab, name), name)

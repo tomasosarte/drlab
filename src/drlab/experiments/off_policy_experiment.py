@@ -47,7 +47,15 @@ class OffPolicyExperiment:
 
         # Init drl components
         continous_actions = isinstance(learner, SACLearner)
-        self.runner = Runner(env, controller, False, True, config.gamma, learner.device, continous_actions)
+        self.runner = Runner(
+            env,
+            controller,
+            False,
+            config.use_last_episode,
+            config.gamma,
+            learner.device,
+            continous_actions,
+        )
         self.learner = learner
 
         # Init replay buffer

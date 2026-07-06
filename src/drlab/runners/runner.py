@@ -57,10 +57,6 @@ class Runner:
 
         return int(action_t.item())
 
-
-    def _actions_to_tensor(self, actions):
-        return th.from_numpy(self._actions_to_array(actions))
-
     def _actions_to_array(self, actions) -> np.ndarray:
         if self.continuous_actions:
             return np.asarray(actions, dtype=np.float32)

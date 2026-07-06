@@ -1,5 +1,4 @@
 import torch as th
-import torch.nn.functional as F
 from torch.distributions import Normal
 
 from .base import OffPolicyLearner
@@ -54,6 +53,10 @@ class SACLearner(OffPolicyLearner):
     @property
     def alpha(self) -> th.Tensor:
         return self.log_alpha.exp()
+
+    def _set_requires_grad(self, model: th.nn.Module, requires_grad: bool) -> None:
+        for param in model.parameters():
+            param.requires_grad_(requires_grad)
 
     def get_policy_dist(self, states: th.Tensor):
         output = self.actor(states)
@@ -131,6 +134,9 @@ class SACLearner(OffPolicyLearner):
         # --------------------------------------------------
         # 2. Update actor
         # --------------------------------------------------
+        self._set_requires_grad(self.critic1, False)
+        self._set_requires_grad(self.critic2, False)
+        
         new_actions, log_probs = self.sample_action_and_log_prob(states)
         new_q1 = self.critic1(th.cat([states, new_actions], dim=-1))
         new_q2 = self.critic2(th.cat([states, new_actions], dim=-1))
@@ -142,6 +148,9 @@ class SACLearner(OffPolicyLearner):
             optimizer=self.actor_optimizer,
             parameters=self.actor.parameters(),
         )
+
+        self._set_requires_grad(self.critic1, True)
+        self._set_requires_grad(self.critic2, True)
 
         # --------------------------------------------------
         # 3. Update alpha

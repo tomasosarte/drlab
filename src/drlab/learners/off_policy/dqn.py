@@ -13,32 +13,37 @@ class DQNLearner(OffPolicyLearner):
         optimizer: th.optim.Optimizer,
         config: DQNConfig,
     ):
-        super().__init__(model, optimizer, config)
+        super().__init__(config)
+
+        self.model = model.to(self.device)
+        self.optimizer = optimizer
 
         self.criterion = config.criterion
         self.double_q = config.double_q
         self.num_actions = config.num_actions
 
-    def _validate_config(self):
-        super()._validate_config()
+        self._validate_dqn_config()
 
-        if self.config.double_q and not self.config.use_target_model:
-            raise ValueError(
-                "double_q=True requires use_target_model=True "
-                "(needs a target network)."
-            )
+        self.target_model = None
+        if self.use_target_model:
+            self.target_model = self.make_target_model(self.model)
 
-        if self.config.num_actions <= 0:
-            raise ValueError(f"num_actions must be > 0, got {self.config.num_actions}")
+    def _validate_dqn_config(self) -> None:
+        if self.double_q and not self.use_target_model:
+            raise ValueError("double_q=True requires use_target_model=True.")
+
+        if self.num_actions <= 0:
+            raise ValueError(f"num_actions must be > 0, got {self.num_actions}.")
 
     def q_values(self, states: th.Tensor, target: bool = False) -> th.Tensor:
-        return self.forward(states, target=target)[:, : self.num_actions]
+        model = self.target_model if target and self.target_model is not None else self.model
+        return model(states)[:, : self.num_actions]
 
-    def _current_values(self, states: th.Tensor, actions: th.Tensor):
+    def current_values(self, states: th.Tensor, actions: th.Tensor):
         qvalues = self.q_values(states, target=False)
         return qvalues.gather(dim=-1, index=actions)
 
-    def _next_values(self, next_states: th.Tensor) -> th.Tensor:
+    def next_values(self, next_states: th.Tensor) -> th.Tensor:
         with th.no_grad():
             if self.double_q:
                 # action selection from online net, evaluation from target net
@@ -60,12 +65,15 @@ class DQNLearner(OffPolicyLearner):
     ) -> float:
         self.model.train(True)
 
-        # Compute targets and loss
+        # Compute targets
         not_done = 1.0 - dones.float()
-        targets = rewards + self.gamma * (not_done * self._next_values(next_states))
-        pred = self._current_values(states, actions)
+        targets = rewards + self.gamma * (not_done * self.next_values(next_states))
+        pred = self.current_values(states, actions)
+        
+        # Compute loss
         td_loss = self.criterion(pred, targets)
-        reg_loss = self._regularization_loss(
+        reg_loss = self.regularization_loss(
+            self.model,
             rewards=rewards,
             dones=dones,
             states=states,
@@ -74,8 +82,20 @@ class DQNLearner(OffPolicyLearner):
         )
         loss = td_loss + reg_loss
 
-        # Optimize
-        self.optimize(loss)
+        # Update learner state
+        self.optimize(
+            loss,
+            optimizer=self.optimizer,
+            parameters=self.model.parameters(),
+        )
 
-        self.target_model_update()
-        return float(loss.item())
+        if self.target_model is not None:
+            self.update_targets([(self.target_model, self.model)])
+
+        self.last_losses = {
+            "td": float(td_loss.item()),
+            "regularization": float(reg_loss.item()),
+            "total": float(loss.item()),
+        }
+
+        return self.last_losses["total"]

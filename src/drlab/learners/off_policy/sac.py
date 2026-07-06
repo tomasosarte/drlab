@@ -19,47 +19,37 @@ class SACLearner(OffPolicyLearner):
         critic2_optimizer: th.optim.Optimizer,
         config: SACConfig,
     ):
+        super().__init__(config)
 
-        self.config = config
-        self.device = th.device(config.device)
-        self.gamma = config.gamma
-        self.regularizers = config.regularizers
-        self.reg_lams = config.reg_lams
-        self.clip_grad = config.clip_grad
-        self.grad_norm_clip = config.grad_norm_clip
-        self.target_update_calls = 0
-        self.use_target_model = config.use_target_model
-        self.target_update = config.target_update
-        self.target_update_interval = config.target_update_interval
-        self.soft_target_update_param = config.soft_target_update_param
-        self._validate_config()
+        if not self.use_target_model:
+            raise ValueError("SAC requires target critics, so use_target_model=True.")
 
         self.actor = actor.to(self.device)
         self.critic1 = critic1.to(self.device)
         self.critic2 = critic2.to(self.device)
-        self.critic1_target = self._make_target_model(self.critic1)
-        self.critic2_target = self._make_target_model(self.critic2)
+
+        self.critic1_target = self.make_target_model(self.critic1)
+        self.critic2_target = self.make_target_model(self.critic2)
 
         self.actor_optimizer = actor_optimizer
         self.critic1_optimizer = critic1_optimizer
         self.critic2_optimizer = critic2_optimizer
-        self.model = self.actor
-        self.optimizer = self.actor_optimizer
-        self.parameters = list(self.actor.parameters())
 
-        self.target_entropy = self.config.target_entropy
+        self.criterion = config.criterion
+
+        # Entropy tuning parameters
+        self.target_entropy = config.target_entropy
         if self.target_entropy is None:
-            self.target_entropy = -float(self.config.action_dim)
+            self.target_entropy = -float(config.action_dim)
 
-        self.log_alpha = th.nn.Parameter(th.tensor(0.0, device=self.device))
-        self.alpha_optimizer = th.optim.Adam([self.log_alpha], lr=self.config.alpha_lr)
-        self.all_parameters = (
-            self.parameters
-            + list(self.critic1.parameters())
-            + list(self.critic2.parameters())
-            + [self.log_alpha]
+        self.log_alpha = th.nn.Parameter(
+            th.tensor(0.0, device=self.device)
         )
-        self.last_losses: dict[str, float] = {}
+
+        self.alpha_optimizer = th.optim.Adam(
+            [self.log_alpha],
+            lr=config.alpha_lr,
+        )
 
     @property
     def alpha(self) -> th.Tensor:
@@ -83,19 +73,14 @@ class SACLearner(OffPolicyLearner):
         if deterministic:
             u = mean
             return th.tanh(u), th.zeros(obs.shape[0], 1, device=obs.device)
-        else:
-            dist = Normal(mean, std)
-            u = dist.rsample()  # reparameterization trick
-            action = th.tanh(u)
+        
+        dist = Normal(mean, std)
+        u = dist.rsample()  # reparameterization trick
+        action = th.tanh(u)
 
-            # Gaussian log prob before tanh
-            log_prob = dist.log_prob(u)
-
-            # Tanh correction
-            log_prob -= th.log(1.0 - action.pow(2) + 1e-6)
-
-            # Sum over action dimensions
-            log_prob = log_prob.sum(dim=-1, keepdim=True)
+        log_prob = dist.log_prob(u) # Gaussian log prob before tanh        
+        log_prob -= th.log(1.0 - action.pow(2) + 1e-6) # Tanh correction
+        log_prob = log_prob.sum(dim=-1, keepdim=True) # Sum over action dimensions
 
         return action, log_prob
 
@@ -129,8 +114,8 @@ class SACLearner(OffPolicyLearner):
         current_q1 = self.critic1(th.cat([states, actions], dim=-1))
         current_q2 = self.critic2(th.cat([states, actions], dim=-1))
 
-        critic1_loss = F.mse_loss(current_q1, targets)
-        critic2_loss = F.mse_loss(current_q2, targets)
+        critic1_loss = self.criterion(current_q1, targets)
+        critic2_loss = self.criterion(current_q2, targets)
         critic_loss = critic1_loss + critic2_loss
         self.optimize(
             critic1_loss,
@@ -172,8 +157,10 @@ class SACLearner(OffPolicyLearner):
         )
 
         # Update target networks
-        self._soft_update(self.critic1_target, self.critic1)
-        self._soft_update(self.critic2_target, self.critic2)
+        self.update_targets([
+            (self.critic1_target, self.critic1),
+            (self.critic2_target, self.critic2),
+        ])
 
         loss = actor_loss + critic_loss + alpha_loss
         self.last_losses = {

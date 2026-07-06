@@ -1,8 +1,9 @@
-import torch as th
-from math import prod
-from enum import Enum
-from typing import Callable, Tuple
 from dataclasses import dataclass, field
+from enum import Enum
+from math import prod
+from typing import Callable, Tuple
+
+import torch as th
 
 
 class TargetUpdate(str, Enum):
@@ -14,18 +15,18 @@ class TargetUpdate(str, Enum):
 class OffPolicyConfig:
     device: th.device | str = "cpu"
 
+    gamma: float = 0.99
+
     regularizers: list[Callable[..., th.Tensor | float]] = field(default_factory=list)
     reg_lams: list[float] = field(default_factory=list)
 
     clip_grad: bool = True
     grad_norm_clip: float = 1.0
 
-    gamma: float = 0.99
-
     use_target_model: bool = True
-    target_update: TargetUpdate = TargetUpdate.SOFT
+    target_update: TargetUpdate | str = TargetUpdate.SOFT
     target_update_interval: int = 100
-    soft_target_update_param: float = 0.1
+    soft_target_update_param: float = 0.005
 
     action_shape: Tuple[int, ...] = (1,)
 
@@ -40,17 +41,19 @@ class DQNConfig(OffPolicyConfig):
     double_q: bool = True
     num_actions: int = 2
 
+
 @dataclass
 class SACConfig(OffPolicyConfig):
     criterion: th.nn.Module = field(default_factory=th.nn.MSELoss)
 
-    # Entropy temperature
     target_entropy: float | None = None
     alpha_lr: float = 3e-4
 
-    # Gaussian policy stability
     min_log_std: float = -20.0
     max_log_std: float = 2.0
+
+    # SAC normally uses soft target updates with small tau.
+    soft_target_update_param: float = 0.005
 
     @property
     def action_dim(self) -> int:

@@ -59,15 +59,48 @@ class Runner:
 
 
     def _actions_to_tensor(self, actions):
-        if self.continuous_actions:
-            return th.from_numpy(np.asarray(actions, dtype=np.float32))
+        return th.from_numpy(self._actions_to_array(actions))
 
-        return th.as_tensor(actions, dtype=th.int64).unsqueeze(-1)
+    def _actions_to_array(self, actions) -> np.ndarray:
+        if self.continuous_actions:
+            return np.asarray(actions, dtype=np.float32)
+
+        return np.asarray(actions, dtype=np.int64).reshape(-1, 1)
+
+    def _make_batch(
+        self,
+        states,
+        actions,
+        rewards,
+        dones,
+        next_states,
+        returns,
+        as_numpy: bool,
+    ) -> TransitionBatch:
+        states = np.asarray(states, dtype=np.float32)
+        actions = self._actions_to_array(actions)
+        rewards = np.asarray(rewards, dtype=np.float32).reshape(-1, 1)
+        dones = np.asarray(dones, dtype=np.bool_).reshape(-1, 1)
+        next_states = np.asarray(next_states, dtype=np.float32)
+        returns = np.asarray(returns, dtype=np.float32).reshape(-1, 1)
+
+        if as_numpy:
+            return TransitionBatch(states, actions, rewards, dones, next_states, returns)
+
+        return TransitionBatch(
+            states=th.from_numpy(states),
+            actions=th.from_numpy(actions),
+            rewards=th.from_numpy(rewards),
+            dones=th.from_numpy(dones),
+            next_states=th.from_numpy(next_states),
+            returns=th.from_numpy(returns),
+        )
     
     def run(
             self,
-            num_steps: int
-        ) -> tuple[TransitionBatch, list, list, TransitionBatch]:
+            num_steps: int,
+            as_numpy: bool = False,
+        ) -> tuple[TransitionBatch, list, list, TransitionBatch | None]:
 
         self.controller.model.eval()
         last_episode = None
@@ -117,13 +150,14 @@ class Runner:
             self.state = next_state
             if done:
                 if self.return_last_episode:
-                    last_episode = TransitionBatch(
-                        states=th.from_numpy(np.asarray(self._ep_states, dtype=np.float32)),
-                        actions=self._actions_to_tensor(self._ep_actions),
-                        rewards=th.as_tensor(self._ep_rewards, dtype=th.float32).unsqueeze(-1),
-                        dones=th.as_tensor(self._ep_dones, dtype=th.bool).unsqueeze(-1),
-                        next_states=th.from_numpy(np.asarray(self._ep_next_states, dtype=np.float32)),
-                        returns=th.as_tensor(self._ep_returns, dtype=th.float32).unsqueeze(-1),
+                    last_episode = self._make_batch(
+                        self._ep_states,
+                        self._ep_actions,
+                        self._ep_rewards,
+                        self._ep_dones,
+                        self._ep_next_states,
+                        self._ep_returns,
+                        as_numpy,
                     )
                     self._ep_states, self._ep_actions, self._ep_rewards = [], [], []
                     self._ep_dones, self._ep_next_states, self._ep_returns = [], [], []
@@ -139,12 +173,13 @@ class Runner:
             if st >= num_steps and not run_one_episode:
                 break
         
-        batch = TransitionBatch(
-            states=th.from_numpy(np.asarray(states, dtype=np.float32)),
-            actions=self._actions_to_tensor(actions),
-            rewards=th.as_tensor(rewards, dtype=th.float32).unsqueeze(-1),
-            dones=th.as_tensor(dones, dtype=th.bool).unsqueeze(-1),
-            next_states=th.from_numpy(np.asarray(next_states, dtype=np.float32)),
-            returns=th.as_tensor(returns, dtype=th.float32).unsqueeze(-1)
+        batch = self._make_batch(
+            states,
+            actions,
+            rewards,
+            dones,
+            next_states,
+            returns,
+            as_numpy,
         )
         return batch, ep_returns, ep_lengths, last_episode

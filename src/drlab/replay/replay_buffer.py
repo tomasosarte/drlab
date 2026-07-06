@@ -52,12 +52,12 @@ class ReplayBuffer:
         assert B <= self.capacity, f"Batch size B={B} must be <= capacity={self.capacity}"
 
         if self.continuous_actions:
-            actions = np.asarray(actions).reshape(B, *self.action_shape).astype(np.float32)
+            actions = np.asarray(actions, dtype=np.float32).reshape(B, *self.action_shape)
         else:
-            actions = np.asarray(actions).reshape(B, 1).astype(np.int64)
-        rewards = np.asarray(rewards).reshape(B, 1).astype(np.float32)
-        dones   = np.asarray(dones).reshape(B, 1).astype(np.bool_)
-        returns = np.asarray(returns).reshape(B, 1).astype(np.float32)
+            actions = np.asarray(actions, dtype=np.int64).reshape(B, 1)
+        rewards = np.asarray(rewards, dtype=np.float32).reshape(B, 1)
+        dones = np.asarray(dones, dtype=np.bool_).reshape(B, 1)
+        returns = np.asarray(returns, dtype=np.float32).reshape(B, 1)
 
         idx = (self.ptr + np.arange(B)) % self.capacity
 

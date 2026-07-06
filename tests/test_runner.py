@@ -79,3 +79,24 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(ep_returns, [])
         self.assertEqual(ep_lengths, [])
         self.assertIsNone(last_episode)
+
+    def test_run_can_return_numpy_batch(self):
+        env = ThreeStepEnv()
+        model = FixedLogits([0.0, 1.0])
+        controller = GreedyController(model, num_actions=2)
+        runner = Runner(env, controller, calculate_returns=True, gamma=1.0)
+
+        batch, ep_returns, ep_lengths, last_episode = runner.run(0, as_numpy=True)
+
+        self.assertIsInstance(batch, TransitionBatch)
+        self.assertIsInstance(last_episode, TransitionBatch)
+        self.assertIsInstance(batch.states, np.ndarray)
+        self.assertEqual(batch.states.dtype, np.float32)
+        self.assertEqual(batch.actions.dtype, np.int64)
+        self.assertEqual(batch.actions.squeeze(-1).tolist(), [1, 1, 1])
+        self.assertEqual(ep_returns, [6.0])
+        self.assertEqual(ep_lengths, [3])
+        np.testing.assert_array_equal(
+            batch.returns.squeeze(-1),
+            np.asarray([6.0, 4.0, 2.0], dtype=np.float32),
+        )

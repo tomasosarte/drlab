@@ -100,12 +100,12 @@ class OffPolicyExperiment:
     def _learn_from_batch(self, batch: TransitionBatch, last_episode: TransitionBatch | None) -> float:
         # 1) Add batch to replay buffer
         self.replay_buffer.add(
-            states=batch.states.cpu().numpy(),
-            actions=batch.actions.cpu().numpy(),
-            rewards=batch.rewards.cpu().numpy(),
-            dones=batch.dones.cpu().numpy(),
-            next_states=batch.next_states.cpu().numpy(),
-            returns=batch.returns.cpu().numpy(),
+            states=batch.states,
+            actions=batch.actions,
+            rewards=batch.rewards,
+            dones=batch.dones,
+            next_states=batch.next_states,
+            returns=batch.returns,
         )
         if self.replay_buffer.size < self.batch_size:
             return 0.0
@@ -130,7 +130,10 @@ class OffPolicyExperiment:
         while steps < self.max_steps:
 
             # 1. Run batch of transitions
-            batch, ep_returns, ep_lengths, last_episode = self.runner.run(self.run_steps)
+            batch, ep_returns, ep_lengths, last_episode = self.runner.run(
+                self.run_steps,
+                as_numpy=True,
+            )
 
             # 2. Learn from batch
             loss = self._learn_from_batch(batch, last_episode)

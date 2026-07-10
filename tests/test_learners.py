@@ -101,8 +101,58 @@ class LearnerSmokeTest(unittest.TestCase):
         self.assertTrue(parameters_changed(actor, before))
         self.assertEqual(
             set(learner.last_losses),
-            {"actor", "critic", "alpha", "total"},
+            {"actor", "critic", "alpha", "regularization", "total"},
         )
+
+    def test_sac_actor_regularizer_contributes_to_loss(self):
+        th.manual_seed(0)
+        obs_dim = 4
+        action_dim = 2
+        actor = th.nn.Sequential(
+            th.nn.Linear(obs_dim, 8),
+            th.nn.ReLU(),
+            th.nn.Linear(8, 2 * action_dim),
+        )
+        critic1 = th.nn.Sequential(
+            th.nn.Linear(obs_dim + action_dim, 8),
+            th.nn.ReLU(),
+            th.nn.Linear(8, 1),
+        )
+        critic2 = th.nn.Sequential(
+            th.nn.Linear(obs_dim + action_dim, 8),
+            th.nn.ReLU(),
+            th.nn.Linear(8, 1),
+        )
+        calls = []
+
+        def actor_l2(model, rewards, dones, states, actions, next_states):
+            calls.append(model)
+            return sum(param.square().sum() for param in model.parameters())
+
+        learner = SACLearner(
+            actor=actor,
+            critic1=critic1,
+            critic2=critic2,
+            actor_optimizer=th.optim.SGD(actor.parameters(), lr=0.05),
+            critic1_optimizer=th.optim.SGD(critic1.parameters(), lr=0.05),
+            critic2_optimizer=th.optim.SGD(critic2.parameters(), lr=0.05),
+            config=SACConfig(
+                action_shape=(action_dim,),
+                regularizers=[actor_l2],
+                reg_lams=[0.01],
+            ),
+        )
+
+        learner.train(
+            rewards=th.tensor([[1.0], [0.0], [1.0]]),
+            dones=th.tensor([[False], [True], [False]]),
+            states=th.randn(3, obs_dim),
+            actions=th.randn(3, action_dim).tanh(),
+            next_states=th.randn(3, obs_dim),
+        )
+
+        self.assertEqual(calls, [actor])
+        self.assertGreater(learner.last_losses["regularization"], 0.0)
 
     def test_reinforce_train_step_returns_float_and_updates_parameters(self):
         th.manual_seed(0)

@@ -24,6 +24,7 @@ class OffPolicyExperimentConfig:
     grad_repeats: int = 1
     step_callback: Callable[[int], None] | None = None
     step_callback_interval: int | None = None
+    learning_starts: int | None = None
 
 
 class OffPolicyExperiment:
@@ -44,6 +45,10 @@ class OffPolicyExperiment:
         self.run_steps = config.run_steps
         self.step_callback = config.step_callback
         self.step_callback_interval = config.step_callback_interval
+        self.steps = 0
+        self.learning_starts = (
+            config.batch_size if config.learning_starts is None else config.learning_starts
+        )
 
         # Init drl components
         continous_actions = isinstance(learner, SACLearner)
@@ -73,8 +78,14 @@ class OffPolicyExperiment:
         self.writer = SummaryWriter(log_dir=config.log_dir)
         self.experiment_name = config.experiment_name
 
+        self._validate_config()
+        
+    def _validate_config(self):
         if self.step_callback is not None and self.step_callback_interval is None:
             raise ValueError("step_callback_interval must be set when step_callback is provided.")
+
+        if self.learning_starts < self.batch_size:
+            raise ValueError("learning_starts must be greater than or equal to batch_size.")
 
     def _make_minibatch(self, batch: TransitionBatch, last_episode: TransitionBatch | None) -> TransitionBatch:
 
@@ -97,7 +108,11 @@ class OffPolicyExperiment:
         rest = self.replay_buffer.sample(self.batch_size - ep_len)
         return rest.cat(episode)
 
-    def _learn_from_batch(self, batch: TransitionBatch, last_episode: TransitionBatch | None) -> float:
+    def _learn_from_batch(
+        self,
+        batch: TransitionBatch,
+        last_episode: TransitionBatch | None,
+    ) -> float:
         # 1) Add batch to replay buffer
         self.replay_buffer.add(
             states=batch.states,
@@ -107,7 +122,7 @@ class OffPolicyExperiment:
             next_states=batch.next_states,
             returns=batch.returns,
         )
-        if self.replay_buffer.size < self.batch_size:
+        if self.steps < self.learning_starts:
             return 0.0
 
         # 2) train repeats
@@ -121,13 +136,13 @@ class OffPolicyExperiment:
         return total_loss / self.grad_repeats
 
     def run(self):
-
-        steps = 0
+        
+        self.steps = 0
         if self.step_callback is not None:
-            self.step_callback(steps)
+            self.step_callback(self.steps)
         next_callback_step = self.step_callback_interval
         pbar = tqdm(total=self.max_steps, desc=self.experiment_name, dynamic_ncols=True, mininterval=1.0)
-        while steps < self.max_steps:
+        while self.steps < self.max_steps:
 
             # 1. Run batch of transitions
             batch, ep_returns, ep_lengths, last_episode = self.runner.run(
@@ -135,16 +150,20 @@ class OffPolicyExperiment:
                 as_numpy=True,
             )
 
+            step_inc = batch.states.shape[0]
+            self.steps += step_inc
+            pbar.update(step_inc)
+
             # 2. Learn from batch
             loss = self._learn_from_batch(batch, last_episode)
 
             # 3. Log results
-            self.writer.add_scalar("Loss", loss, steps)
+            self.writer.add_scalar("Loss", loss, self.steps)
             if ep_returns:
                 mean_return = np.mean(ep_returns)
                 mean_length = np.mean(ep_lengths)
-                self.writer.add_scalar("Episode return", mean_return, steps)
-                self.writer.add_scalar("Episode Length", mean_length, steps)
+                self.writer.add_scalar("Episode return", mean_return, self.steps)
+                self.writer.add_scalar("Episode Length", mean_length, self.steps)
 
                 pbar.set_postfix({
                     "loss": f"{loss:.3f}",
@@ -152,12 +171,7 @@ class OffPolicyExperiment:
                     "len": f"{mean_length:.1f}",
                 }, refresh=False)
 
-            # 3. Update steps & progress bar
-            step_inc = batch.states.shape[0] 
-            steps += step_inc 
-            pbar.update(step_inc)
-
-            while self.step_callback is not None and steps >= next_callback_step:
+            while self.step_callback is not None and self.steps >= next_callback_step:
                 self.step_callback(next_callback_step)
                 next_callback_step += self.step_callback_interval
         

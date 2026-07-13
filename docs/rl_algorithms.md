@@ -80,6 +80,25 @@ updates from transitions collected earlier.
 4. Sample minibatches from the buffer.
 5. Call the learner one or more times.
 
+`OffPolicyExperimentConfig` accepts these parameters:
+
+| Parameter | Description |
+| --- | --- |
+| `max_steps` | Total number of environment steps to collect. |
+| `gamma` | Discount factor passed to the runner. Defaults to `0.99`. |
+| `run_steps` | Steps collected per runner call; values `<= 0` run one episode. Defaults to `0`. |
+| `log_dir` | TensorBoard output directory. |
+| `experiment_name` | Name displayed by the progress bar. |
+| `use_replay` | Whether to sample training batches from replay. Defaults to `True`. |
+| `replay_buffer_size` | Maximum number of stored transitions. Defaults to `10_000`. |
+| `batch_size` | Number of transitions in a training batch. Defaults to `128`. |
+| `use_last_episode` | Whether to include the latest episode in the training batch. Defaults to `True`. |
+| `grad_repeats` | Learner updates performed per collected batch. Defaults to `1`. |
+| `step_callback` | Optional callback receiving the current step. |
+| `step_callback_interval` | Number of steps between callback calls. |
+| `learning_starts` | Step at which learning begins. Defaults to `batch_size`. |
+| `warmup_steps` | Initial steps that use random actions sampled from the environment. Defaults to `0`. |
+
 ### DQN
 
 Deep Q-Network learns a value for each discrete action. Given a state, the model

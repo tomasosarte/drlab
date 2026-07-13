@@ -158,7 +158,6 @@ experiment = OffPolicyExperiment(
         max_steps=10_000,
         run_steps=1,
         batch_size=64,
-        warmup_steps=1_000,
         log_dir="runs/examples/dqn_cartpole",
     ),
 )

@@ -145,7 +145,16 @@ class SACLearner(OffPolicyLearner):
         new_q2 = self.critic2(new_action_states)
         new_q = th.min(new_q1, new_q2)
 
-        actor_loss = (self.alpha.detach() * log_probs - new_q).mean()
+        policy_loss = (self.alpha.detach() * log_probs - new_q).mean()
+        reg_loss = self.regularization_loss(
+            self.actor,
+            rewards=rewards,
+            dones=dones,
+            states=states,
+            actions=actions,
+            next_states=next_states,
+        )
+        actor_loss = policy_loss + reg_loss
         self.optimize(
             actor_loss,
             optimizer=self.actor_optimizer,
@@ -176,9 +185,10 @@ class SACLearner(OffPolicyLearner):
 
         loss = actor_loss + critic_loss + alpha_loss
         self.last_losses = {
-            "actor": float(actor_loss.item()),
+            "actor": float(policy_loss.item()),
             "critic": float(critic_loss.item()),
             "alpha": float(alpha_loss.item()),
+            "regularization": float(reg_loss.item()),
             "total": float(loss.item()),
         }
 

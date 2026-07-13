@@ -107,6 +107,7 @@ def main(
             run_steps=1,
             batch_size=batch_size,
             replay_buffer_size=replay_size,
+            warmup_steps=1_000,
             use_last_episode=False,
             grad_repeats=grad_repeats,
             log_dir=log_dir or f"runs/examples/sac_metaworld_{safe_task_name}",

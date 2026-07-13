@@ -1,5 +1,6 @@
 import unittest
 
+import numpy as np
 import torch as th
 
 from drlab.controllers import (
@@ -9,6 +10,7 @@ from drlab.controllers import (
     GaussianController,
     GreedyController,
     StochasticController,
+    WarmupController,
 )
 
 
@@ -23,6 +25,14 @@ class FixedLogits(th.nn.Module):
 
 class FixedGaussianOutput(FixedLogits):
     pass
+
+
+class FixedActionSpace:
+    def __init__(self, action):
+        self.action = action
+
+    def sample(self):
+        return self.action
 
 
 class ControllerTest(unittest.TestCase):
@@ -115,3 +125,39 @@ class ControllerTest(unittest.TestCase):
         self.assertTrue(th.allclose(probs.sum(dim=-1), th.ones(5)))
         self.assertEqual(actions.shape, (5,))
         self.assertTrue(th.all((0 <= actions) & (actions < 3)))
+
+    def test_warmup_controller_samples_actions_before_delegating(self):
+        model = FixedLogits([1.0, 0.0, 0.0])
+        greedy = GreedyController(model, num_actions=3)
+        controller = WarmupController(greedy, FixedActionSpace(2), warmup_steps=2)
+        obs = th.zeros(1, 2)
+
+        self.assertIsInstance(controller, ContinuousActionController)
+        self.assertIsInstance(controller, DiscreteActionController)
+        self.assertTrue(th.equal(controller.choose(obs), th.tensor([2])))
+        self.assertTrue(th.equal(controller.choose(obs), th.tensor([2])))
+        self.assertTrue(th.equal(controller.choose(obs), th.tensor([0])))
+        self.assertEqual(controller.steps, 2)
+
+    def test_warmup_controller_returns_uniform_discrete_probabilities(self):
+        model = FixedLogits([1.0, 0.0, 0.0])
+        greedy = GreedyController(model, num_actions=3)
+        controller = WarmupController(greedy, FixedActionSpace(2), warmup_steps=1)
+
+        probs = controller.probabilities(th.zeros(1, 2))
+
+        self.assertTrue(th.allclose(probs, th.full((1, 3), 1 / 3)))
+
+    def test_warmup_controller_samples_continuous_actions(self):
+        model = FixedGaussianOutput([0.0, 0.0, -3.0, -3.0])
+        gaussian = GaussianController(model, action_dim=2, deterministic=True)
+        action_space = FixedActionSpace(np.asarray([0.5, -0.25], dtype=np.float32))
+        controller = WarmupController(gaussian, action_space, warmup_steps=1)
+        obs = th.zeros(2, 2)
+
+        warmup_actions = controller.choose(obs)
+        policy_actions = controller.choose(obs)
+
+        self.assertEqual(warmup_actions.shape, (2, 2))
+        self.assertTrue(th.allclose(warmup_actions[0], th.tensor([0.5, -0.25])))
+        self.assertTrue(th.allclose(policy_actions, th.zeros(2, 2)))

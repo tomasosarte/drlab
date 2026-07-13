@@ -5,7 +5,7 @@ import gymnasium as gym
 import numpy as np
 import torch as th
 
-from drlab.controllers import GreedyController
+from drlab.controllers import GreedyController, WarmupController
 from drlab.experiments import OffPolicyExperiment, OffPolicyExperimentConfig
 from drlab.learners import OffPolicyConfig, OffPolicyLearner
 from drlab.replay import TransitionBatch
@@ -115,3 +115,40 @@ class OffPolicyExperimentTest(unittest.TestCase):
                 self.assertEqual(experiment.learner.train_calls, 1)
             finally:
                 experiment.writer.close()
+
+    def test_warmup_steps_wraps_controller(self):
+        with tempfile.TemporaryDirectory() as log_dir:
+            experiment = self.make_experiment(
+                OffPolicyExperimentConfig(
+                    max_steps=1,
+                    warmup_steps=10,
+                    log_dir=log_dir,
+                )
+            )
+            try:
+                self.assertEqual(experiment.warmup_steps, 10)
+                self.assertIsInstance(experiment.runner.controller, WarmupController)
+                self.assertEqual(experiment.runner.controller.warmup_steps, 10)
+            finally:
+                experiment.writer.close()
+
+    def test_zero_warmup_steps_keeps_original_controller(self):
+        with tempfile.TemporaryDirectory() as log_dir:
+            experiment = self.make_experiment(
+                OffPolicyExperimentConfig(max_steps=1, log_dir=log_dir)
+            )
+            try:
+                self.assertNotIsInstance(experiment.runner.controller, WarmupController)
+            finally:
+                experiment.writer.close()
+
+    def test_negative_warmup_steps_is_rejected(self):
+        with tempfile.TemporaryDirectory() as log_dir:
+            with self.assertRaisesRegex(ValueError, "warmup_steps"):
+                self.make_experiment(
+                    OffPolicyExperimentConfig(
+                        max_steps=1,
+                        warmup_steps=-1,
+                        log_dir=log_dir,
+                    )
+                )

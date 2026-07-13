@@ -34,6 +34,7 @@ class PublicAPITest(unittest.TestCase):
             "StochasticController",
             "TransitionBatch",
             "ValueTargets",
+            "WarmupController",
         }
 
         self.assertEqual(drlab.__version__, "0.2.1")

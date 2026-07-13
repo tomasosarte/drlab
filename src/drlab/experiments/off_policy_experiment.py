@@ -2,12 +2,12 @@ import numpy as np
 from tqdm import tqdm
 import gymnasium as gym
 from dataclasses import dataclass
-from typing import Callable, Tuple
+from typing import Callable
 from torch.utils.tensorboard import SummaryWriter
 
 from drlab.learners import OffPolicyLearner, SACLearner
 from drlab.runners import Runner
-from drlab.controllers import Controller
+from drlab.controllers import Controller, WarmupController
 from drlab.replay import TransitionBatch, ReplayBuffer
 
 @dataclass
@@ -25,6 +25,7 @@ class OffPolicyExperimentConfig:
     step_callback: Callable[[int], None] | None = None
     step_callback_interval: int | None = None
     learning_starts: int | None = None
+    warmup_steps: int = 0
 
 
 class OffPolicyExperiment:
@@ -49,9 +50,18 @@ class OffPolicyExperiment:
         self.learning_starts = (
             config.batch_size if config.learning_starts is None else config.learning_starts
         )
+        self.warmup_steps = config.warmup_steps
+
+        self._validate_config()
 
         # Init drl components
         continous_actions = isinstance(learner, SACLearner)
+        if self.warmup_steps > 0:
+            controller = WarmupController(
+                controller,
+                env.action_space,
+                warmup_steps=self.warmup_steps,
+            )
         self.runner = Runner(
             env,
             controller,
@@ -78,14 +88,16 @@ class OffPolicyExperiment:
         self.writer = SummaryWriter(log_dir=config.log_dir)
         self.experiment_name = config.experiment_name
 
-        self._validate_config()
-        
+
     def _validate_config(self):
         if self.step_callback is not None and self.step_callback_interval is None:
             raise ValueError("step_callback_interval must be set when step_callback is provided.")
 
         if self.learning_starts < self.batch_size:
             raise ValueError("learning_starts must be greater than or equal to batch_size.")
+
+        if self.warmup_steps < 0:
+            raise ValueError("warmup_steps must be greater than or equal to 0.")
 
     def _make_minibatch(self, batch: TransitionBatch, last_episode: TransitionBatch | None) -> TransitionBatch:
 

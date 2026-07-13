@@ -6,6 +6,7 @@ from drlab.controllers import (
     GaussianController,
     GreedyController,
     StochasticController,
+    WarmupController,
 )
 from drlab.experiments import (
     OnPolicyExperiment,
@@ -68,4 +69,5 @@ __all__ = [
     "StochasticController",
     "TransitionBatch",
     "ValueTargets",
+    "WarmupController",
 ]

@@ -99,6 +99,7 @@ class BenchmarkConfig:
     ppo_clip: float = 0.2
     sac_batch_size: int = 256
     sac_replay_size: int = 50_000
+    sac_warmup_steps: int = 256
     sac_tau: float = 0.005
 
 
@@ -703,6 +704,7 @@ def train_drlab_sac(config: BenchmarkConfig, seed: int) -> RunResult:
             replay_buffer_size=config.sac_replay_size,
             use_last_episode=False,
             grad_repeats=1,
+            warmup_steps=config.sac_warmup_steps,
             log_dir=str(run_log_dir(config, "sac", DRLAB, seed)),
             experiment_name="drlab SAC Pendulum",
         ),

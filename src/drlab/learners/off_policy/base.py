@@ -88,7 +88,7 @@ class OffPolicyLearner(ABC):
         self,
         model: th.nn.Module,
         rewards: th.Tensor,
-        dones: th.Tensor,
+        terminated: th.Tensor,
         states: th.Tensor,
         actions: th.Tensor,
         next_states: th.Tensor,
@@ -102,7 +102,7 @@ class OffPolicyLearner(ABC):
             value = regularizer(
                 model,
                 rewards,
-                dones,
+                terminated,
                 states,
                 actions,
                 next_states,
@@ -139,7 +139,7 @@ class OffPolicyLearner(ABC):
     def train(
         self,
         rewards: th.Tensor,
-        dones: th.Tensor,
+        terminated: th.Tensor,
         states: th.Tensor,
         actions: th.Tensor,
         next_states: th.Tensor,

@@ -18,7 +18,7 @@ class ReinforceLearner(OnPolicyLearner):
         self,
         returns: th.Tensor,
         rewards: th.Tensor,
-        dones: th.Tensor,
+        terminated: th.Tensor,
         values: th.Tensor | None,
         next_values: th.Tensor | None,
     ) -> th.Tensor:
@@ -34,7 +34,7 @@ class ReinforceLearner(OnPolicyLearner):
     def train(
         self,
         rewards: th.Tensor,
-        dones: th.Tensor,
+        terminated: th.Tensor,
         states: th.Tensor,
         actions: th.Tensor,
         next_states: th.Tensor,
@@ -50,7 +50,7 @@ class ReinforceLearner(OnPolicyLearner):
         advantages = self._advantages(
             returns=returns,
             rewards=rewards,
-            dones=dones,
+            terminated=terminated,
             values=None,
             next_values=None,
         )
@@ -60,7 +60,7 @@ class ReinforceLearner(OnPolicyLearner):
         entropy_loss = self._entropy_loss(logits)
         reg_loss = self._regularization_loss(
             rewards=rewards,
-            dones=dones,
+            terminated=terminated,
             states=states,
             actions=actions,
             next_states=next_states,

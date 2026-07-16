@@ -50,7 +50,7 @@ class OnPolicyLearner:
     def _regularization_loss(
         self,
         rewards: th.Tensor,
-        dones: th.Tensor,
+        terminated: th.Tensor,
         states: th.Tensor,
         actions: th.Tensor,
         next_states: th.Tensor,
@@ -59,7 +59,7 @@ class OnPolicyLearner:
             return 0.0
 
         return sum(
-            lam * reg(self.actor, rewards, dones, states, actions, next_states)
+            lam * reg(self.actor, rewards, terminated, states, actions, next_states)
             for reg, lam in zip(self.config.regularizers, self.config.reg_lams)
         )
 
@@ -67,7 +67,7 @@ class OnPolicyLearner:
         self,
         returns: th.Tensor,
         rewards: th.Tensor,
-        dones: th.Tensor,
+        terminated: th.Tensor,
         values: th.Tensor,
         next_values: th.Tensor,
     ) -> th.Tensor:
@@ -106,7 +106,7 @@ class OnPolicyLearner:
             self, 
             returns: th.Tensor, 
             rewards: th.Tensor,
-            dones: th.Tensor,
+            terminated: th.Tensor,
             values: th.Tensor,
             next_values: th.Tensor
         ) -> th.Tensor:
@@ -115,7 +115,7 @@ class OnPolicyLearner:
     def train(
         self,
         rewards: th.Tensor,      # float32, [B,1]
-        dones: th.Tensor,        # bool or float(0/1), [B,1]
+        terminated: th.Tensor,   # bool or float(0/1), [B,1]
         states: th.Tensor,       # float32, [B, obs_dim] or [B,C,H,W]
         actions: th.Tensor,      # int64, [B,1]
         next_states: th.Tensor,  # float32, same as states

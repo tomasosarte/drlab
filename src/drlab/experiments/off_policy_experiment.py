@@ -130,7 +130,8 @@ class OffPolicyExperiment:
             states=batch.states,
             actions=batch.actions,
             rewards=batch.rewards,
-            dones=batch.dones,
+            terminated=batch.terminated,
+            truncated=batch.truncated,
             next_states=batch.next_states,
             returns=batch.returns,
         )
@@ -142,7 +143,7 @@ class OffPolicyExperiment:
         for _ in range(self.grad_repeats):
             mb = self._make_minibatch(batch, last_episode)
             total_loss += self.learner.train(
-                mb.rewards, mb.dones, mb.states, mb.actions, mb.next_states
+                mb.rewards, mb.terminated, mb.states, mb.actions, mb.next_states
             )
 
         return total_loss / self.grad_repeats

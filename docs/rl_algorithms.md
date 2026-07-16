@@ -15,8 +15,8 @@ The main pieces used by all algorithms are:
 
 - `Runner`: steps through a Gymnasium environment with a controller and returns
   transition data.
-- `TransitionBatch`: stores tensors for states, actions, rewards, done flags,
-  next states, and returns.
+- `TransitionBatch`: stores tensors for states, actions, rewards, termination and
+  truncation flags, next states, and returns.
 - `Controller`: converts model outputs into environment actions.
 - `Learner`: updates one or more PyTorch models from transition batches.
 - `Experiment`: coordinates the runner, learner, logging, and replay-buffer
@@ -52,7 +52,8 @@ Learners operate on batches with shape `[B, ...]`, where `B` is the batch size.
 | `states` | `[B, *obs_shape]` | Current observations. |
 | `actions` | `[B, 1]` or `[B, *action_shape]` | Discrete action indices or continuous action vectors. |
 | `rewards` | `[B, 1]` | Immediate rewards. |
-| `dones` | `[B, 1]` | Episode termination or truncation flags. |
+| `terminated` | `[B, 1]` | True terminal-state flags; these disable value bootstrapping. |
+| `truncated` | `[B, 1]` | External episode cutoffs, such as time limits; these do not disable bootstrapping. |
 | `next_states` | `[B, *obs_shape]` | Observations after each action. |
 | `returns` | `[B, 1]` | Discounted returns, used by on-policy methods when needed. |
 
@@ -107,7 +108,7 @@ value. During training, DQN compares the current Q-value against a one-step
 temporal-difference target:
 
 ```text
-target = reward + gamma * (1 - done) * next_q
+target = reward + gamma * (1 - terminated) * next_q
 loss = criterion(Q(state, action), target)
 ```
 
@@ -159,7 +160,7 @@ The critic target combines reward, future value, and entropy:
 target_q = min(Q1_target(next_state, next_action),
                Q2_target(next_state, next_action))
 
-target = reward + gamma * (1 - done) * (target_q - alpha * log_prob)
+target = reward + gamma * (1 - terminated) * (target_q - alpha * log_prob)
 ```
 
 The actor is trained to prefer actions with high predicted value while also

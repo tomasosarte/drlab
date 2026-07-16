@@ -48,6 +48,12 @@ class ThreeStepEnv(gym.Env):
         return obs, reward, terminated, truncated, {}
 
 
+class TruncatingEnv(ThreeStepEnv):
+    def step(self, action):
+        obs, reward, _, _, info = super().step(action)
+        return obs, reward, False, self.t >= 3, info
+
+
 class RunnerTest(unittest.TestCase):
     def test_run_zero_collects_one_complete_episode_with_returns(self):
         env = ThreeStepEnv()
@@ -65,6 +71,23 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(ep_lengths, [3])
         self.assertTrue(th.equal(batch.returns.squeeze(-1), th.tensor([6.0, 4.0, 2.0])))
         self.assertTrue(th.equal(last_episode.returns.squeeze(-1), th.tensor([6.0, 4.0, 2.0])))
+        self.assertTrue(batch.terminated[-1].item())
+        self.assertFalse(batch.truncated.any().item())
+
+    def test_truncation_ends_episode_without_marking_transition_terminal(self):
+        env = TruncatingEnv()
+        model = FixedLogits([0.0, 1.0])
+        controller = GreedyController(model, num_actions=2)
+        runner = Runner(env, controller, calculate_returns=False)
+
+        batch, ep_returns, ep_lengths, last_episode = runner.run(0)
+
+        self.assertEqual(ep_returns, [6.0])
+        self.assertEqual(ep_lengths, [3])
+        self.assertIsNotNone(last_episode)
+        self.assertFalse(batch.terminated.any().item())
+        self.assertTrue(batch.truncated[-1].item())
+        self.assertTrue((batch.terminated | batch.truncated)[-1].item())
 
     def test_run_positive_steps_can_return_partial_batch(self):
         env = ThreeStepEnv()

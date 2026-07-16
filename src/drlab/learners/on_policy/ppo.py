@@ -38,7 +38,7 @@ class PPOLearner(ActorCriticLearner):
     def train(
         self,
         rewards: th.Tensor,
-        dones: th.Tensor,
+        terminated: th.Tensor,
         states: th.Tensor,
         actions: th.Tensor,
         next_states: th.Tensor,
@@ -69,7 +69,7 @@ class PPOLearner(ActorCriticLearner):
             advantages = self._advantages(
                 returns=returns,
                 rewards=rewards,
-                dones=dones,
+                terminated=terminated,
                 values=old_values,
                 next_values=next_values,
             )
@@ -96,7 +96,7 @@ class PPOLearner(ActorCriticLearner):
                 value_loss = self.config.value_lambda * self._value_loss(
                     returns=returns,
                     rewards=rewards,
-                    dones=dones,
+                    terminated=terminated,
                     values=values,
                     next_values=next_values,
                 )
@@ -105,7 +105,7 @@ class PPOLearner(ActorCriticLearner):
 
             reg_loss = self._regularization_loss(
                 rewards=rewards,
-                dones=dones,
+                terminated=terminated,
                 states=states,
                 actions=actions,
                 next_states=next_states,

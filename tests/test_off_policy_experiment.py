@@ -49,7 +49,7 @@ class CountingLearner(OffPolicyLearner):
     def train(
         self,
         rewards: th.Tensor,
-        dones: th.Tensor,
+        terminated: th.Tensor,
         states: th.Tensor,
         actions: th.Tensor,
         next_states: th.Tensor,
@@ -63,7 +63,8 @@ def one_transition() -> TransitionBatch:
         states=np.asarray([[0.0]], dtype=np.float32),
         actions=np.asarray([[0]], dtype=np.int64),
         rewards=np.asarray([[1.0]], dtype=np.float32),
-        dones=np.asarray([[False]], dtype=np.bool_),
+        terminated=np.asarray([[False]], dtype=np.bool_),
+        truncated=np.asarray([[False]], dtype=np.bool_),
         next_states=np.asarray([[1.0]], dtype=np.float32),
         returns=np.asarray([[1.0]], dtype=np.float32),
     )

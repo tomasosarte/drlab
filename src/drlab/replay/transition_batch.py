@@ -8,7 +8,8 @@ class TransitionBatch:
     states: th.Tensor | np.ndarray       # [B, obs_dim]
     actions: th.Tensor | np.ndarray      # [B, 1] (int64/float32)
     rewards: th.Tensor | np.ndarray      # [B, 1] (float)
-    dones: th.Tensor | np.ndarray        # [B, 1] (bool)
+    terminated: th.Tensor | np.ndarray   # [B, 1] (bool), disables bootstrapping
+    truncated: th.Tensor | np.ndarray    # [B, 1] (bool), ends an episode only
     next_states: th.Tensor | np.ndarray  # [B, obs_dim]
     returns: th.Tensor | np.ndarray      # [B, 1] (float)
 
@@ -24,7 +25,8 @@ class TransitionBatch:
             states=move(self.states),
             actions=move(self.actions),
             rewards=move(self.rewards),
-            dones=move(self.dones),
+            terminated=move(self.terminated),
+            truncated=move(self.truncated),
             next_states=move(self.next_states),
             returns=move(self.returns),
         )
@@ -34,7 +36,8 @@ class TransitionBatch:
             states=th.cat([self.states, other.states], dim=0),
             actions=th.cat([self.actions, other.actions], dim=0),
             rewards=th.cat([self.rewards, other.rewards], dim=0),
-            dones=th.cat([self.dones, other.dones], dim=0),
+            terminated=th.cat([self.terminated, other.terminated], dim=0),
+            truncated=th.cat([self.truncated, other.truncated], dim=0),
             next_states=th.cat([self.next_states, other.next_states], dim=0),
             returns=th.cat([self.returns, other.returns], dim=0),
         )

@@ -47,7 +47,7 @@ class LearnerSmokeTest(unittest.TestCase):
 
         loss = learner.train(
             rewards=th.tensor([[1.0], [0.0], [1.0]]),
-            dones=th.tensor([[False], [True], [False]]),
+            terminated=th.tensor([[False], [True], [False]]),
             states=th.randn(3, 4),
             actions=th.tensor([[0], [1], [0]], dtype=th.long),
             next_states=th.randn(3, 4),
@@ -90,7 +90,7 @@ class LearnerSmokeTest(unittest.TestCase):
 
         loss = learner.train(
             rewards=th.tensor([[1.0], [0.0], [1.0]]),
-            dones=th.tensor([[False], [True], [False]]),
+            terminated=th.tensor([[False], [True], [False]]),
             states=th.randn(3, obs_dim),
             actions=th.randn(3, action_dim).tanh(),
             next_states=th.randn(3, obs_dim),
@@ -125,7 +125,7 @@ class LearnerSmokeTest(unittest.TestCase):
         )
         calls = []
 
-        def actor_l2(model, rewards, dones, states, actions, next_states):
+        def actor_l2(model, rewards, terminated, states, actions, next_states):
             calls.append(model)
             return sum(param.square().sum() for param in model.parameters())
 
@@ -145,7 +145,7 @@ class LearnerSmokeTest(unittest.TestCase):
 
         learner.train(
             rewards=th.tensor([[1.0], [0.0], [1.0]]),
-            dones=th.tensor([[False], [True], [False]]),
+            terminated=th.tensor([[False], [True], [False]]),
             states=th.randn(3, obs_dim),
             actions=th.randn(3, action_dim).tanh(),
             next_states=th.randn(3, obs_dim),
@@ -171,7 +171,7 @@ class LearnerSmokeTest(unittest.TestCase):
 
         loss = learner.train(
             rewards=th.tensor([[1.0], [0.5], [0.0]]),
-            dones=th.tensor([[False], [False], [True]]),
+            terminated=th.tensor([[False], [False], [True]]),
             states=th.randn(3, 4),
             actions=th.tensor([[0], [1], [0]], dtype=th.long),
             next_states=th.randn(3, 4),
@@ -199,7 +199,7 @@ class LearnerSmokeTest(unittest.TestCase):
 
         loss = learner.train(
             rewards=th.tensor([[1.0], [0.5], [0.0]]),
-            dones=th.tensor([[False], [False], [True]]),
+            terminated=th.tensor([[False], [False], [True]]),
             states=th.randn(3, 4),
             actions=th.tensor([[0], [1], [0]], dtype=th.long),
             next_states=th.randn(3, 4),
@@ -227,7 +227,7 @@ class LearnerSmokeTest(unittest.TestCase):
 
         loss = learner.train(
             rewards=th.tensor([[1.0], [0.5], [0.0]]),
-            dones=th.tensor([[False], [False], [True]]),
+            terminated=th.tensor([[False], [False], [True]]),
             states=th.randn(3, 4),
             actions=th.tensor([[0], [1], [0]], dtype=th.long),
             next_states=th.randn(3, 4),

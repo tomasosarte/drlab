@@ -12,7 +12,8 @@ class TransitionBatchTest(unittest.TestCase):
             states=th.zeros(2, 3),
             actions=th.zeros(2, 1, dtype=th.long),
             rewards=th.ones(2, 1),
-            dones=th.zeros(2, 1, dtype=th.bool),
+            terminated=th.zeros(2, 1, dtype=th.bool),
+            truncated=th.zeros(2, 1, dtype=th.bool),
             next_states=th.ones(2, 3),
             returns=th.full((2, 1), 2.0),
         )
@@ -28,7 +29,8 @@ class TransitionBatchTest(unittest.TestCase):
             states=np.zeros((2, 3), dtype=np.float32),
             actions=np.zeros((2, 1), dtype=np.int64),
             rewards=np.ones((2, 1), dtype=np.float32),
-            dones=np.zeros((2, 1), dtype=np.bool_),
+            terminated=np.zeros((2, 1), dtype=np.bool_),
+            truncated=np.zeros((2, 1), dtype=np.bool_),
             next_states=np.ones((2, 3), dtype=np.float32),
             returns=np.full((2, 1), 2.0, dtype=np.float32),
         )
@@ -37,7 +39,8 @@ class TransitionBatchTest(unittest.TestCase):
 
         self.assertEqual(moved.states.dtype, th.float32)
         self.assertEqual(moved.actions.dtype, th.int64)
-        self.assertEqual(moved.dones.dtype, th.bool)
+        self.assertEqual(moved.terminated.dtype, th.bool)
+        self.assertEqual(moved.truncated.dtype, th.bool)
         self.assertTrue(th.equal(moved.returns, th.full((2, 1), 2.0)))
 
     def test_cat_concatenates_every_field(self):
@@ -45,7 +48,8 @@ class TransitionBatchTest(unittest.TestCase):
             states=th.zeros(1, 2),
             actions=th.zeros(1, 1, dtype=th.long),
             rewards=th.ones(1, 1),
-            dones=th.zeros(1, 1, dtype=th.bool),
+            terminated=th.zeros(1, 1, dtype=th.bool),
+            truncated=th.ones(1, 1, dtype=th.bool),
             next_states=th.ones(1, 2),
             returns=th.ones(1, 1),
         )
@@ -53,7 +57,8 @@ class TransitionBatchTest(unittest.TestCase):
             states=th.ones(2, 2),
             actions=th.ones(2, 1, dtype=th.long),
             rewards=th.full((2, 1), 2.0),
-            dones=th.ones(2, 1, dtype=th.bool),
+            terminated=th.ones(2, 1, dtype=th.bool),
+            truncated=th.zeros(2, 1, dtype=th.bool),
             next_states=th.full((2, 2), 3.0),
             returns=th.full((2, 1), 4.0),
         )
@@ -63,6 +68,8 @@ class TransitionBatchTest(unittest.TestCase):
         self.assertEqual(combined.states.shape, (3, 2))
         self.assertEqual(combined.actions.shape, (3, 1))
         self.assertTrue(th.equal(combined.rewards.squeeze(-1), th.tensor([1.0, 2.0, 2.0])))
+        episode_ends = combined.terminated | combined.truncated
+        self.assertTrue(th.equal(episode_ends, th.ones(3, 1, dtype=th.bool)))
 
 
 class ReplayBufferTest(unittest.TestCase):
@@ -75,7 +82,8 @@ class ReplayBufferTest(unittest.TestCase):
             states=states,
             actions=np.asarray([0, 1, 0]),
             rewards=np.asarray([1.0, 2.0, 3.0]),
-            dones=np.asarray([False, False, True]),
+            terminated=np.asarray([False, False, True]),
+            truncated=np.asarray([False, True, False]),
             next_states=next_states,
             returns=np.asarray([6.0, 5.0, 3.0]),
         )
@@ -87,7 +95,9 @@ class ReplayBufferTest(unittest.TestCase):
         self.assertIsInstance(all_data, TransitionBatch)
         self.assertEqual(all_data.states.shape, (3, 2))
         self.assertEqual(all_data.actions.dtype, th.int64)
-        self.assertEqual(all_data.dones.dtype, th.bool)
+        self.assertEqual(all_data.terminated.dtype, th.bool)
+        self.assertEqual(all_data.truncated.dtype, th.bool)
+        self.assertTrue(all_data.truncated[1].item())
         self.assertIsInstance(sample, TransitionBatch)
         self.assertEqual(sample.states.shape, (2, 2))
 
@@ -98,7 +108,8 @@ class ReplayBufferTest(unittest.TestCase):
             states=np.asarray([[0], [1]], dtype=np.float32),
             actions=np.asarray([0, 1]),
             rewards=np.asarray([0.0, 1.0]),
-            dones=np.asarray([False, False]),
+            terminated=np.asarray([False, False]),
+            truncated=np.asarray([False, False]),
             next_states=np.asarray([[1], [2]], dtype=np.float32),
             returns=np.asarray([1.0, 1.0]),
         )
@@ -106,7 +117,8 @@ class ReplayBufferTest(unittest.TestCase):
             states=np.asarray([[2], [3]], dtype=np.float32),
             actions=np.asarray([0, 1]),
             rewards=np.asarray([2.0, 3.0]),
-            dones=np.asarray([False, True]),
+            terminated=np.asarray([False, True]),
+            truncated=np.asarray([False, False]),
             next_states=np.asarray([[3], [4]], dtype=np.float32),
             returns=np.asarray([5.0, 3.0]),
         )

@@ -27,7 +27,8 @@ class ReplayBuffer:
         self.actions = np.zeros((capacity, *action_shape), dtype=action_dtype)
 
         self.rewards = np.zeros((capacity, 1), dtype=np.float32)
-        self.dones = np.zeros((capacity, 1), dtype=np.bool_)
+        self.terminated = np.zeros((capacity, 1), dtype=np.bool_)
+        self.truncated = np.zeros((capacity, 1), dtype=np.bool_)
         self.returns = np.zeros((capacity, 1), dtype=np.float32)
 
         self.ptr = 0
@@ -41,7 +42,8 @@ class ReplayBuffer:
         states: np.ndarray,       # [B, *obs_shape]
         actions: np.ndarray,      # [B] or [B,1]
         rewards: np.ndarray,      # [B] or [B,1]
-        dones: np.ndarray,        # [B] or [B,1] (bool)
+        terminated: np.ndarray,   # [B] or [B,1] (bool)
+        truncated: np.ndarray,    # [B] or [B,1] (bool)
         next_states: np.ndarray,  # [B, *obs_shape]
         returns: np.ndarray       # [B, 1]
 
@@ -56,7 +58,8 @@ class ReplayBuffer:
         else:
             actions = np.asarray(actions, dtype=np.int64).reshape(B, 1)
         rewards = np.asarray(rewards, dtype=np.float32).reshape(B, 1)
-        dones = np.asarray(dones, dtype=np.bool_).reshape(B, 1)
+        terminated = np.asarray(terminated, dtype=np.bool_).reshape(B, 1)
+        truncated = np.asarray(truncated, dtype=np.bool_).reshape(B, 1)
         returns = np.asarray(returns, dtype=np.float32).reshape(B, 1)
 
         idx = (self.ptr + np.arange(B)) % self.capacity
@@ -65,7 +68,8 @@ class ReplayBuffer:
         self.next_states[idx] = next_states
         self.actions[idx] = actions
         self.rewards[idx] = rewards
-        self.dones[idx] = dones
+        self.terminated[idx] = terminated
+        self.truncated[idx] = truncated
         self.returns[idx] = returns
 
         self.ptr = (self.ptr + B) % self.capacity
@@ -76,9 +80,12 @@ class ReplayBuffer:
         next_states = th.from_numpy(self.next_states[:self.size]).to(self.device)
         actions = th.from_numpy(self.actions[:self.size]).to(self.device)
         rewards = th.from_numpy(self.rewards[:self.size]).to(self.device)
-        dones = th.from_numpy(self.dones[:self.size]).to(self.device)
+        terminated = th.from_numpy(self.terminated[:self.size]).to(self.device)
+        truncated = th.from_numpy(self.truncated[:self.size]).to(self.device)
         returns = th.from_numpy(self.returns[:self.size]).to(self.device)
-        return TransitionBatch(states, actions, rewards, dones, next_states, returns)
+        return TransitionBatch(
+            states, actions, rewards, terminated, truncated, next_states, returns
+        )
 
     def sample(self, batch_size: int) -> TransitionBatch:
         if self.size == 0:
@@ -90,7 +97,10 @@ class ReplayBuffer:
         next_states = th.from_numpy(self.next_states[idx]).to(self.device)
         actions = th.from_numpy(self.actions[idx]).to(self.device)               # long already
         rewards = th.from_numpy(self.rewards[idx]).to(self.device)               # float32
-        dones = th.from_numpy(self.dones[idx]).to(self.device)                   # bool
+        terminated = th.from_numpy(self.terminated[idx]).to(self.device)         # bool
+        truncated = th.from_numpy(self.truncated[idx]).to(self.device)           # bool
         returns = th.from_numpy(self.returns[idx]).to(self.device)               # float32
 
-        return TransitionBatch(states, actions, rewards, dones, next_states, returns)
+        return TransitionBatch(
+            states, actions, rewards, terminated, truncated, next_states, returns
+        )

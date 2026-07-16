@@ -65,7 +65,7 @@ class OnPolicyExperiment:
             # 2. Learn from batch
             loss = self.learner.train(
                 batch.rewards,
-                batch.dones,
+                batch.terminated,
                 batch.states,
                 batch.actions,
                 batch.next_states,

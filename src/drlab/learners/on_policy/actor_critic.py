@@ -28,14 +28,14 @@ class ActorCriticLearner(OnPolicyLearner):
         self,
         returns: th.Tensor,
         rewards: th.Tensor,
-        dones: th.Tensor,
+        terminated: th.Tensor,
         values: th.Tensor,
         next_values: th.Tensor,
     ) -> th.Tensor:
         if self.config.value_targets == ValueTargets.RETURNS:
             targets = returns
         elif self.config.value_targets == ValueTargets.TD:
-            targets = rewards + self.config.gamma * (~dones * next_values)
+            targets = rewards + self.config.gamma * (~terminated * next_values)
         else:
             raise ValueError(f"Unknown value_targets: {self.config.value_targets}")
         return self.config.value_criterion(values, targets)
@@ -44,13 +44,13 @@ class ActorCriticLearner(OnPolicyLearner):
             self, 
             returns: th.Tensor, 
             rewards: th.Tensor,
-            dones: th.Tensor,
+            terminated: th.Tensor,
             values: th.Tensor,
             next_values: th.Tensor
         ) -> th.Tensor:
         advantages = None
         if self.config.advantage_bootstrap:
-            advantages = rewards + self.config.gamma * (~dones * next_values)
+            advantages = rewards + self.config.gamma * (~terminated * next_values)
         else: 
             advantages = returns
         if self.config.use_bias:
@@ -74,7 +74,7 @@ class ActorCriticLearner(OnPolicyLearner):
     def train(
         self,
         rewards: th.Tensor,
-        dones: th.Tensor,
+        terminated: th.Tensor,
         states: th.Tensor,
         actions: th.Tensor,
         next_states: th.Tensor,
@@ -106,7 +106,7 @@ class ActorCriticLearner(OnPolicyLearner):
         advantages = self._advantages(
             returns=returns,
             rewards=rewards,
-            dones=dones,
+            terminated=terminated,
             values=values,
             next_values=next_values,
         )
@@ -119,7 +119,7 @@ class ActorCriticLearner(OnPolicyLearner):
             value_loss = self.config.value_lambda * self._value_loss(
                 returns=returns,
                 rewards=rewards,
-                dones=dones,
+                terminated=terminated,
                 values=values,
                 next_values=next_values,
             )
@@ -128,7 +128,7 @@ class ActorCriticLearner(OnPolicyLearner):
 
         reg_loss = self._regularization_loss(
             rewards=rewards,
-            dones=dones,
+            terminated=terminated,
             states=states,
             actions=actions,
             next_states=next_states,

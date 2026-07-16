@@ -90,7 +90,7 @@ class SACLearner(OffPolicyLearner):
     def train(
         self,
         rewards: th.Tensor,      # float32, [B,1]
-        dones: th.Tensor,        # bool or float(0/1), [B,1]
+        terminated: th.Tensor,   # bool or float(0/1), [B,1]
         states: th.Tensor,       # float32, [B, obs_dim] or [B,C,H,W]
         actions: th.Tensor,      # float32, [B, action_dim]
         next_states: th.Tensor,  # float32, same as states
@@ -110,9 +110,9 @@ class SACLearner(OffPolicyLearner):
             target_q2 = self.critic2_target(next_action_states)
             target_q = th.min(target_q1, target_q2)
 
-            not_done = 1.0 - dones.float()
+            not_terminated = 1.0 - terminated.float()
             targets = rewards + self.config.gamma * (
-                not_done * (target_q - self.alpha.detach() * next_log_probs)
+                not_terminated * (target_q - self.alpha.detach() * next_log_probs)
             )
 
         action_states = th.cat([states, actions], dim=-1)
@@ -149,7 +149,7 @@ class SACLearner(OffPolicyLearner):
         reg_loss = self.regularization_loss(
             self.actor,
             rewards=rewards,
-            dones=dones,
+            terminated=terminated,
             states=states,
             actions=actions,
             next_states=next_states,

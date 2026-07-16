@@ -58,7 +58,7 @@ class DQNLearner(OffPolicyLearner):
     def train(
         self,
         rewards: th.Tensor,      # float32, [B,1]
-        dones: th.Tensor,        # bool or float(0/1), [B,1]
+        terminated: th.Tensor,   # bool or float(0/1), [B,1]
         states: th.Tensor,       # float32, [B, obs_dim] or [B,C,H,W]
         actions: th.Tensor,      # int64, [B,1]
         next_states: th.Tensor,  # float32, same as states
@@ -66,8 +66,10 @@ class DQNLearner(OffPolicyLearner):
         self.model.train(True)
 
         # Compute targets
-        not_done = 1.0 - dones.float()
-        targets = rewards + self.gamma * (not_done * self.next_values(next_states))
+        not_terminated = 1.0 - terminated.float()
+        targets = rewards + self.gamma * (
+            not_terminated * self.next_values(next_states)
+        )
         pred = self.current_values(states, actions)
         
         # Compute loss
@@ -75,7 +77,7 @@ class DQNLearner(OffPolicyLearner):
         reg_loss = self.regularization_loss(
             self.model,
             rewards=rewards,
-            dones=dones,
+            terminated=terminated,
             states=states,
             actions=actions,
             next_states=next_states,

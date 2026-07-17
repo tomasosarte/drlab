@@ -86,7 +86,9 @@ class LearnerSmokeTest(unittest.TestCase):
             critic2_optimizer=th.optim.SGD(critic2.parameters(), lr=0.05),
             config=SACConfig(action_shape=(action_dim,), initial_alpha=0.2),
         )
-        before = [param.detach().clone() for param in actor.parameters()]
+        actor_before = [param.detach().clone() for param in actor.parameters()]
+        critic1_before = [param.detach().clone() for param in critic1.parameters()]
+        critic2_before = [param.detach().clone() for param in critic2.parameters()]
 
         self.assertAlmostEqual(learner.alpha.item(), 0.2)
 
@@ -100,7 +102,9 @@ class LearnerSmokeTest(unittest.TestCase):
 
         self.assertIsInstance(loss, float)
         self.assertTrue(th.isfinite(th.tensor(loss)))
-        self.assertTrue(parameters_changed(actor, before))
+        self.assertTrue(parameters_changed(actor, actor_before))
+        self.assertTrue(parameters_changed(critic1, critic1_before))
+        self.assertTrue(parameters_changed(critic2, critic2_before))
         self.assertEqual(
             set(learner.last_losses),
             {"actor", "critic", "alpha", "regularization", "total"},

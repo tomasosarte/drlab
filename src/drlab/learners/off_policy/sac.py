@@ -79,7 +79,9 @@ class SACLearner(OffPolicyLearner):
             u = mean
             return th.tanh(u), th.zeros(obs.shape[0], 1, device=obs.device)
         
-        dist = Normal(mean, std)
+        # std is exp(clamped log_std), so positivity is guaranteed and
+        # Normal's runtime argument validation would only add synchronization.
+        dist = Normal(mean, std, validate_args=False)
         u = dist.rsample()  # reparameterization trick
         action = th.tanh(u)
 
@@ -124,16 +126,23 @@ class SACLearner(OffPolicyLearner):
         critic1_loss = self.criterion(current_q1, targets)
         critic2_loss = self.criterion(current_q2, targets)
         critic_loss = critic1_loss + critic2_loss
-        self.optimize(
-            critic1_loss,
-            optimizer=self.critic1_optimizer,
-            parameters=self.critic1.parameters(),
-        )
-        self.optimize(
-            critic2_loss,
-            optimizer=self.critic2_optimizer,
-            parameters=self.critic2.parameters(),
-        )
+        self.critic1_optimizer.zero_grad(set_to_none=True)
+        self.critic2_optimizer.zero_grad(set_to_none=True)
+        critic_loss.backward()
+
+        if self.clip_grad:
+            # Clip each critic independently to preserve the previous behavior.
+            th.nn.utils.clip_grad_norm_(
+                self.critic1.parameters(),
+                self.grad_norm_clip,
+            )
+            th.nn.utils.clip_grad_norm_(
+                self.critic2.parameters(),
+                self.grad_norm_clip,
+            )
+
+        self.critic1_optimizer.step()
+        self.critic2_optimizer.step()
 
         # --------------------------------------------------
         # 2. Update actor

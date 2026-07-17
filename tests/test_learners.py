@@ -84,9 +84,11 @@ class LearnerSmokeTest(unittest.TestCase):
             actor_optimizer=th.optim.SGD(actor.parameters(), lr=0.05),
             critic1_optimizer=th.optim.SGD(critic1.parameters(), lr=0.05),
             critic2_optimizer=th.optim.SGD(critic2.parameters(), lr=0.05),
-            config=SACConfig(action_shape=(action_dim,)),
+            config=SACConfig(action_shape=(action_dim,), initial_alpha=0.2),
         )
         before = [param.detach().clone() for param in actor.parameters()]
+
+        self.assertAlmostEqual(learner.alpha.item(), 0.2)
 
         loss = learner.train(
             rewards=th.tensor([[1.0], [0.0], [1.0]]),
@@ -103,6 +105,10 @@ class LearnerSmokeTest(unittest.TestCase):
             set(learner.last_losses),
             {"actor", "critic", "alpha", "regularization", "total"},
         )
+
+    def test_sac_initial_alpha_must_be_positive(self):
+        with self.assertRaisesRegex(ValueError, "initial_alpha must be > 0"):
+            SACConfig(initial_alpha=0.0)
 
     def test_sac_actor_regularizer_contributes_to_loss(self):
         th.manual_seed(0)

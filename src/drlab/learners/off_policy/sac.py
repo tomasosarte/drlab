@@ -1,3 +1,5 @@
+import math
+
 import torch as th
 from torch.distributions import Normal
 
@@ -42,7 +44,7 @@ class SACLearner(OffPolicyLearner):
             self.target_entropy = -float(config.action_dim)
 
         self.log_alpha = th.nn.Parameter(
-            th.tensor(0.0, device=self.device)
+            th.tensor(math.log(config.initial_alpha), device=self.device)
         )
 
         self.alpha_optimizer = th.optim.Adam(

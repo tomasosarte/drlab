@@ -183,6 +183,8 @@ Important config fields include:
 - `criterion`: critic loss.
 - `target_entropy`: desired policy entropy. If unset, it defaults to
   `-action_dim`.
+- `initial_alpha`: initial entropy coefficient before automatic tuning. It
+  defaults to `1.0`.
 - `alpha_lr`: learning rate for the entropy coefficient.
 - `min_log_std` and `max_log_std`: clamp bounds for actor log standard
   deviations.

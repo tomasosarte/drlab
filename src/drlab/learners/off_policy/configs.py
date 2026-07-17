@@ -47,6 +47,7 @@ class SACConfig(OffPolicyConfig):
     criterion: th.nn.Module = field(default_factory=th.nn.MSELoss)
 
     target_entropy: float | None = None
+    initial_alpha: float = 1.0
     alpha_lr: float = 3e-4
 
     min_log_std: float = -20.0
@@ -64,6 +65,9 @@ class SACConfig(OffPolicyConfig):
 
         if self.action_dim <= 0:
             raise ValueError("action_dim must be > 0.")
+
+        if self.initial_alpha <= 0.0:
+            raise ValueError("initial_alpha must be > 0.")
 
         if self.alpha_lr <= 0.0:
             raise ValueError("alpha_lr must be > 0.")

@@ -92,6 +92,25 @@ class LearnerSmokeTest(unittest.TestCase):
 
         self.assertAlmostEqual(learner.alpha.item(), 0.2)
 
+        probe_states = th.randn(3, obs_dim)
+        th.manual_seed(123)
+        sampled_actions, sampled_log_probs = learner.sample_action_and_log_prob(
+            probe_states
+        )
+        th.manual_seed(123)
+        mean, std = learner.get_policy_dist(probe_states)
+        dist = th.distributions.Normal(mean, std, validate_args=False)
+        unsquashed_actions = dist.rsample()
+        expected_actions = th.tanh(unsquashed_actions)
+        expected_log_probs = dist.log_prob(unsquashed_actions)
+        expected_log_probs -= th.log(1.0 - expected_actions.pow(2) + 1e-6)
+        expected_log_probs = expected_log_probs.sum(dim=-1, keepdim=True)
+
+        self.assertTrue(th.equal(sampled_actions, expected_actions))
+        self.assertTrue(
+            th.allclose(sampled_log_probs, expected_log_probs, atol=1e-6, rtol=1e-5)
+        )
+
         loss = learner.train(
             rewards=th.tensor([[1.0], [0.0], [1.0]]),
             terminated=th.tensor([[False], [True], [False]]),

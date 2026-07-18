@@ -1,7 +1,6 @@
 import math
 
 import torch as th
-from torch.distributions import Normal
 
 from .base import OffPolicyLearner
 from .configs import SACConfig
@@ -60,11 +59,15 @@ class SACLearner(OffPolicyLearner):
         for param in model.parameters():
             param.requires_grad_(requires_grad)
 
-    def get_policy_dist(self, states: th.Tensor):
+    def _get_policy_params(self, states: th.Tensor) -> tuple[th.Tensor, th.Tensor]:
         output = self.actor(states)
         mean = output[:, : self.config.action_dim]
         log_std = output[:, self.config.action_dim :]
         log_std = th.clamp(log_std, self.config.min_log_std, self.config.max_log_std)
+        return mean, log_std
+
+    def get_policy_dist(self, states: th.Tensor) -> tuple[th.Tensor, th.Tensor]:
+        mean, log_std = self._get_policy_params(states)
         std = th.exp(log_std)
         return mean, std
 
@@ -73,21 +76,23 @@ class SACLearner(OffPolicyLearner):
         obs: th.Tensor,
         deterministic: bool = False,
     ) -> tuple[th.Tensor, th.Tensor]:
-        mean, std = self.get_policy_dist(obs)
+        mean, log_std = self._get_policy_params(obs)
 
         if deterministic:
             u = mean
             return th.tanh(u), th.zeros(obs.shape[0], 1, device=obs.device)
-        
-        # std is exp(clamped log_std), so positivity is guaranteed and
-        # Normal's runtime argument validation would only add synchronization.
-        dist = Normal(mean, std, validate_args=False)
-        u = dist.rsample()  # reparameterization trick
+
+        # Specialized reparameterized Gaussian sampling avoids the generic
+        # distribution object's redundant scale and normalized-noise work.
+        eps = th.randn_like(mean)
+        u = mean + th.exp(log_std) * eps
         action = th.tanh(u)
 
-        log_prob = dist.log_prob(u) # Gaussian log prob before tanh        
-        log_prob -= th.log(1.0 - action.pow(2) + 1e-6) # Tanh correction
-        log_prob = log_prob.sum(dim=-1, keepdim=True) # Sum over action dimensions
+        log_prob = -0.5 * (
+            eps.square() + 2.0 * log_std + math.log(2.0 * math.pi)
+        )
+        log_prob -= th.log(1.0 - action.pow(2) + 1e-6)  # Tanh correction
+        log_prob = log_prob.sum(dim=-1, keepdim=True)  # Sum over action dimensions
 
         return action, log_prob
 

@@ -52,25 +52,39 @@ class OffPolicyLearner(ABC):
 
         return target
 
-    def hard_update(self, target: th.nn.Module, source: th.nn.Module):
+    def _hard_update(self, target: th.nn.Module, source: th.nn.Module):
         target.load_state_dict(source.state_dict())
         target.eval()
 
-    def soft_update(self, target: th.nn.Module, source: th.nn.Module):
-        tau = self.soft_target_update_param
+    def _soft_update(
+        self,
+        pairs: list[tuple[th.nn.Module, th.nn.Module]],
+    ) -> None:
+        target_parameters = [
+            parameter
+            for target, _ in pairs
+            for parameter in target.parameters()
+        ]
+        source_parameters = [
+            parameter
+            for _, source in pairs
+            for parameter in source.parameters()
+        ]
 
         with th.no_grad():
-            for target_p, source_p in zip(target.parameters(), source.parameters()):
-                target_p.data.mul_(1.0 - tau)
-                target_p.data.add_(tau * source_p.data)
+            th._foreach_mul_(target_parameters, 1.0 - self.soft_target_update_param)
+            scaled_sources = th._foreach_mul(
+                source_parameters,
+                self.soft_target_update_param,
+            )
+            th._foreach_add_(target_parameters, scaled_sources)
 
     def update_targets(
         self,
         pairs: list[tuple[th.nn.Module, th.nn.Module]],
     ):
         if self.target_update == TargetUpdate.SOFT:
-            for target, source in pairs:
-                self.soft_update(target, source)
+            self._soft_update(pairs)
             return
 
         if self.target_update == TargetUpdate.HARD:
@@ -78,7 +92,7 @@ class OffPolicyLearner(ABC):
 
             if self.target_update_calls % self.target_update_interval == 0:
                 for target, source in pairs:
-                    self.hard_update(target, source)
+                    self._hard_update(target, source)
 
             return
 

@@ -25,6 +25,39 @@ def parameters_changed(model, before):
 
 
 class LearnerSmokeTest(unittest.TestCase):
+    def test_soft_target_update_matches_original_arithmetic_exactly(self):
+        source1 = th.nn.Linear(4, 3)
+        source2 = th.nn.Linear(3, 2)
+        target1 = th.nn.Linear(4, 3)
+        target2 = th.nn.Linear(3, 2)
+        expected1 = th.nn.Linear(4, 3)
+        expected2 = th.nn.Linear(3, 2)
+        expected1.load_state_dict(target1.state_dict())
+        expected2.load_state_dict(target2.state_dict())
+
+        model = th.nn.Linear(1, 2)
+        learner = DQNLearner(
+            model,
+            th.optim.SGD(model.parameters(), lr=0.1),
+            DQNConfig(num_actions=2, soft_target_update_param=0.005),
+        )
+
+        with th.no_grad():
+            for target, source in ((expected1, source1), (expected2, source2)):
+                for target_param, source_param in zip(
+                    target.parameters(), source.parameters()
+                ):
+                    target_param.data.mul_(0.995)
+                    target_param.data.add_(0.005 * source_param.data)
+
+        learner.update_targets([(target1, source1), (target2, source2)])
+
+        for actual, expected in zip(
+            [*target1.parameters(), *target2.parameters()],
+            [*expected1.parameters(), *expected2.parameters()],
+        ):
+            self.assertTrue(th.equal(actual, expected))
+
     def test_dqn_train_step_returns_float_and_updates_parameters(self):
         th.manual_seed(0)
         model = th.nn.Sequential(

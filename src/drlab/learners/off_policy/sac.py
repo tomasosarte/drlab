@@ -27,6 +27,7 @@ class SACLearner(OffPolicyLearner):
         self.actor = actor.to(self.device)
         self.critic1 = critic1.to(self.device)
         self.critic2 = critic2.to(self.device)
+        self.actor_params = tuple(self.actor.parameters())
 
         self.critic1_target = self.make_target_model(self.critic1)
         self.critic2_target = self.make_target_model(self.critic2)
@@ -54,10 +55,6 @@ class SACLearner(OffPolicyLearner):
     @property
     def alpha(self) -> th.Tensor:
         return self.log_alpha.exp()
-
-    def _set_requires_grad(self, model: th.nn.Module, requires_grad: bool) -> None:
-        for param in model.parameters():
-            param.requires_grad_(requires_grad)
 
     def _get_policy_params(self, states: th.Tensor) -> tuple[th.Tensor, th.Tensor]:
         output = self.actor(states)
@@ -152,9 +149,6 @@ class SACLearner(OffPolicyLearner):
         # --------------------------------------------------
         # 2. Update actor
         # --------------------------------------------------
-        self._set_requires_grad(self.critic1, False)
-        self._set_requires_grad(self.critic2, False)
-        
         new_actions, log_probs = self.sample_action_and_log_prob(states)
         new_action_states = th.cat([states, new_actions], dim=-1)
         new_q1 = self.critic1(new_action_states)
@@ -174,11 +168,8 @@ class SACLearner(OffPolicyLearner):
         self.optimize(
             actor_loss,
             optimizer=self.actor_optimizer,
-            parameters=self.actor.parameters(),
+            parameters=self.actor_params,
         )
-
-        self._set_requires_grad(self.critic1, True)
-        self._set_requires_grad(self.critic2, True)
 
         # --------------------------------------------------
         # 3. Update alpha

@@ -122,6 +122,21 @@ class LearnerSmokeTest(unittest.TestCase):
         actor_before = [param.detach().clone() for param in actor.parameters()]
         critic1_before = [param.detach().clone() for param in critic1.parameters()]
         critic2_before = [param.detach().clone() for param in critic2.parameters()]
+        critic_grad_calls = {
+            id(parameter): 0
+            for parameter in (*critic1.parameters(), *critic2.parameters())
+        }
+        hooks = []
+        for parameter in (*critic1.parameters(), *critic2.parameters()):
+            parameter_id = id(parameter)
+            hooks.append(
+                parameter.register_hook(
+                    lambda gradient, parameter_id=parameter_id: critic_grad_calls.__setitem__(
+                        parameter_id,
+                        critic_grad_calls[parameter_id] + 1,
+                    )
+                )
+            )
 
         self.assertAlmostEqual(learner.alpha.item(), 0.2)
 
@@ -157,10 +172,13 @@ class LearnerSmokeTest(unittest.TestCase):
         self.assertTrue(parameters_changed(actor, actor_before))
         self.assertTrue(parameters_changed(critic1, critic1_before))
         self.assertTrue(parameters_changed(critic2, critic2_before))
+        self.assertTrue(all(call_count == 1 for call_count in critic_grad_calls.values()))
         self.assertEqual(
             set(learner.last_losses),
             {"actor", "critic", "alpha", "regularization", "total"},
         )
+        for hook in hooks:
+            hook.remove()
 
     def test_sac_initial_alpha_must_be_positive(self):
         with self.assertRaisesRegex(ValueError, "initial_alpha must be > 0"):

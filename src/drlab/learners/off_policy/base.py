@@ -1,6 +1,7 @@
 import torch as th
 from copy import deepcopy
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 
 from .configs import OffPolicyConfig, TargetUpdate
 
@@ -133,10 +134,11 @@ class OffPolicyLearner(ABC):
         self,
         loss: th.Tensor,
         optimizer: th.optim.Optimizer,
-        parameters: list[th.nn.Parameter]
+        parameters: Iterable[th.nn.Parameter],
     ):
+        parameters = tuple(parameters)
         optimizer.zero_grad(set_to_none=True)
-        loss.backward()
+        loss.backward(inputs=parameters)
 
         if self.clip_grad:
             th.nn.utils.clip_grad_norm_(

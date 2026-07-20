@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Simplified off-policy gradient clipping configuration. Set
+  `grad_norm_clip=None` to disable clipping; the redundant `clip_grad` option
+  has been removed.
+
 ## [0.2.3] - 2026-07-16
 
 ### Changed

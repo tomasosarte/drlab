@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 import torch as th
 
@@ -78,18 +79,45 @@ class LearnerSmokeTest(unittest.TestCase):
         )
         before = [param.detach().clone() for param in model.parameters()]
 
-        loss = learner.train(
-            rewards=th.tensor([[1.0], [0.0], [1.0]]),
-            terminated=th.tensor([[False], [True], [False]]),
-            states=th.randn(3, 4),
-            actions=th.tensor([[0], [1], [0]], dtype=th.long),
-            next_states=th.randn(3, 4),
-        )
+        with patch(
+            "torch.nn.utils.clip_grad_norm_",
+            wraps=th.nn.utils.clip_grad_norm_,
+        ) as clip_grad_norm:
+            loss = learner.train(
+                rewards=th.tensor([[1.0], [0.0], [1.0]]),
+                terminated=th.tensor([[False], [True], [False]]),
+                states=th.randn(3, 4),
+                actions=th.tensor([[0], [1], [0]], dtype=th.long),
+                next_states=th.randn(3, 4),
+            )
 
         self.assertIsInstance(loss, float)
         self.assertIsInstance(learner, OffPolicyLearner)
         self.assertTrue(th.isfinite(th.tensor(loss)))
         self.assertTrue(parameters_changed(model, before))
+        self.assertEqual(clip_grad_norm.call_count, 1)
+
+    def test_dqn_gradient_clipping_can_be_disabled(self):
+        model = th.nn.Linear(4, 2)
+        learner = DQNLearner(
+            model,
+            th.optim.SGD(model.parameters(), lr=0.05),
+            DQNConfig(
+                num_actions=2,
+                grad_norm_clip=None,
+            ),
+        )
+
+        with patch("torch.nn.utils.clip_grad_norm_") as clip_grad_norm:
+            learner.train(
+                rewards=th.tensor([[1.0], [0.0]]),
+                terminated=th.tensor([[False], [True]]),
+                states=th.randn(2, 4),
+                actions=th.tensor([[0], [1]], dtype=th.long),
+                next_states=th.randn(2, 4),
+            )
+
+        clip_grad_norm.assert_not_called()
 
     def test_sac_train_step_returns_float_and_updates_parameters(self):
         th.manual_seed(0)
@@ -159,13 +187,17 @@ class LearnerSmokeTest(unittest.TestCase):
             th.allclose(sampled_log_probs, expected_log_probs, atol=1e-6, rtol=1e-5)
         )
 
-        loss = learner.train(
-            rewards=th.tensor([[1.0], [0.0], [1.0]]),
-            terminated=th.tensor([[False], [True], [False]]),
-            states=th.randn(3, obs_dim),
-            actions=th.randn(3, action_dim).tanh(),
-            next_states=th.randn(3, obs_dim),
-        )
+        with patch(
+            "torch.nn.utils.clip_grad_norm_",
+            wraps=th.nn.utils.clip_grad_norm_,
+        ) as clip_grad_norm:
+            loss = learner.train(
+                rewards=th.tensor([[1.0], [0.0], [1.0]]),
+                terminated=th.tensor([[False], [True], [False]]),
+                states=th.randn(3, obs_dim),
+                actions=th.randn(3, action_dim).tanh(),
+                next_states=th.randn(3, obs_dim),
+            )
 
         self.assertIsInstance(loss, float)
         self.assertTrue(th.isfinite(th.tensor(loss)))
@@ -173,6 +205,7 @@ class LearnerSmokeTest(unittest.TestCase):
         self.assertTrue(parameters_changed(critic1, critic1_before))
         self.assertTrue(parameters_changed(critic2, critic2_before))
         self.assertTrue(all(call_count == 1 for call_count in critic_grad_calls.values()))
+        self.assertEqual(clip_grad_norm.call_count, 3)
         self.assertEqual(
             set(learner.last_losses),
             {"actor", "critic", "alpha", "regularization", "total"},

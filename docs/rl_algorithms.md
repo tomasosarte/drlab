@@ -138,7 +138,7 @@ Useful config fields include:
 - `target_update`: `"soft"` or `"hard"`.
 - `soft_target_update_param`: soft-update coefficient.
 - `target_update_interval`: hard-update interval.
-- `clip_grad` and `grad_norm_clip`: gradient clipping settings.
+- `grad_norm_clip`: maximum gradient norm, or `None` to disable clipping.
 
 ### SAC
 

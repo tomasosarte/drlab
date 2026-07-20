@@ -27,7 +27,6 @@ class SACLearner(OffPolicyLearner):
         self.actor = actor.to(self.device)
         self.critic1 = critic1.to(self.device)
         self.critic2 = critic2.to(self.device)
-        self.actor_params = tuple(self.actor.parameters())
 
         self.critic1_target = self.make_target_model(self.critic1)
         self.critic2_target = self.make_target_model(self.critic2)
@@ -132,7 +131,7 @@ class SACLearner(OffPolicyLearner):
         self.critic2_optimizer.zero_grad(set_to_none=True)
         critic_loss.backward()
 
-        if self.clip_grad:
+        if self.grad_norm_clip is not None:
             # Clip each critic independently to preserve the previous behavior.
             th.nn.utils.clip_grad_norm_(
                 self.critic1.parameters(),
@@ -168,7 +167,8 @@ class SACLearner(OffPolicyLearner):
         self.optimize(
             actor_loss,
             optimizer=self.actor_optimizer,
-            parameters=self.actor_params,
+            parameters=self.actor.parameters(),
+            grad_norm_clip=self.grad_norm_clip,
         )
 
         # --------------------------------------------------
@@ -182,6 +182,7 @@ class SACLearner(OffPolicyLearner):
             alpha_loss,
             optimizer=self.alpha_optimizer,
             parameters=[self.log_alpha],
+            grad_norm_clip=None,
         )
 
         # Update target networks

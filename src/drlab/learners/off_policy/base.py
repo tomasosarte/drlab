@@ -153,18 +153,21 @@ class OffPolicyLearner(ABC):
         self,
         loss: th.Tensor,
         optimizer: th.optim.Optimizer,
-        parameters: Iterable[th.nn.Parameter],
+        parameters: list[Iterable[th.nn.Parameter]],
         clipnorm: float | None = None,
     ) -> None:
-        parameters = tuple(parameters)
+        parameter_groups = [tuple(group) for group in parameters]
+        parameters = [
+            parameter
+            for group in parameter_groups
+            for parameter in group
+        ]
         optimizer.zero_grad(set_to_none=True)
         loss.backward(inputs=parameters)
 
         if clipnorm is not None:
-            th.nn.utils.clip_grad_norm_(
-                parameters,
-                clipnorm,
-            )
+            for group in parameter_groups:
+                th.nn.utils.clip_grad_norm_(group, clipnorm)
 
         optimizer.step()
 

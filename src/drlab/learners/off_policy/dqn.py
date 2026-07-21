@@ -88,7 +88,7 @@ class DQNLearner(OffPolicyLearner):
         self.optimize(
             loss,
             optimizer=self.optimizer,
-            parameters=self.model.parameters(),
+            parameters=[self.model.parameters()],
             clipnorm=self.clipnorm,
         )
 

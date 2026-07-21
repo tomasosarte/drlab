@@ -15,8 +15,7 @@ class SACLearner(OffPolicyLearner):
         critic1: th.nn.Module,
         critic2: th.nn.Module,
         actor_optimizer: th.optim.Optimizer,
-        critic1_optimizer: th.optim.Optimizer,
-        critic2_optimizer: th.optim.Optimizer,
+        critic_optimizer: th.optim.Optimizer,
         config: SACConfig,
     ):
         super().__init__(config)
@@ -32,8 +31,21 @@ class SACLearner(OffPolicyLearner):
         self.critic2_target = self.make_target_model(self.critic2)
 
         self.actor_optimizer = actor_optimizer
-        self.critic1_optimizer = critic1_optimizer
-        self.critic2_optimizer = critic2_optimizer
+        self.critic_optimizer = critic_optimizer
+
+        self._validate_optimizer_parameters(
+            self.actor_optimizer,
+            self.actor.parameters(),
+            "actor_optimizer",
+        )
+        self._validate_optimizer_parameters(
+            self.critic_optimizer,
+            [
+                *self.critic1.parameters(),
+                *self.critic2.parameters(),
+            ],
+            "critic_optimizer",
+        )
 
         self.criterion = config.criterion
 
@@ -127,8 +139,7 @@ class SACLearner(OffPolicyLearner):
         critic1_loss = self.criterion(current_q1, targets)
         critic2_loss = self.criterion(current_q2, targets)
         critic_loss = critic1_loss + critic2_loss
-        self.critic1_optimizer.zero_grad(set_to_none=True)
-        self.critic2_optimizer.zero_grad(set_to_none=True)
+        self.critic_optimizer.zero_grad(set_to_none=True)
         critic_loss.backward()
 
         if self.clipnorm is not None:
@@ -142,8 +153,7 @@ class SACLearner(OffPolicyLearner):
                 self.clipnorm,
             )
 
-        self.critic1_optimizer.step()
-        self.critic2_optimizer.step()
+        self.critic_optimizer.step()
 
         # --------------------------------------------------
         # 2. Update actor

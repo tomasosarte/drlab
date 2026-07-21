@@ -143,8 +143,10 @@ class LearnerSmokeTest(unittest.TestCase):
             critic1=critic1,
             critic2=critic2,
             actor_optimizer=th.optim.SGD(actor.parameters(), lr=0.05),
-            critic1_optimizer=th.optim.SGD(critic1.parameters(), lr=0.05),
-            critic2_optimizer=th.optim.SGD(critic2.parameters(), lr=0.05),
+            critic_optimizer=th.optim.SGD(
+                [*critic1.parameters(), *critic2.parameters()],
+                lr=0.05,
+            ),
             config=SACConfig(action_shape=(action_dim,), initial_alpha=0.2),
         )
         actor_before = [param.detach().clone() for param in actor.parameters()]
@@ -217,6 +219,40 @@ class LearnerSmokeTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "initial_alpha must be > 0"):
             SACConfig(initial_alpha=0.0)
 
+    def test_sac_validates_actor_and_critic_optimizer_parameters(self):
+        obs_dim = 4
+        action_dim = 2
+        actor = th.nn.Linear(obs_dim, 2 * action_dim)
+        critic1 = th.nn.Linear(obs_dim + action_dim, 1)
+        critic2 = th.nn.Linear(obs_dim + action_dim, 1)
+        critic_parameters = [*critic1.parameters(), *critic2.parameters()]
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "actor_optimizer must contain exactly its model parameters",
+        ):
+            SACLearner(
+                actor=actor,
+                critic1=critic1,
+                critic2=critic2,
+                actor_optimizer=th.optim.SGD(critic1.parameters(), lr=0.05),
+                critic_optimizer=th.optim.SGD(critic_parameters, lr=0.05),
+                config=SACConfig(action_shape=(action_dim,)),
+            )
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "critic_optimizer must contain exactly its model parameters",
+        ):
+            SACLearner(
+                actor=actor,
+                critic1=critic1,
+                critic2=critic2,
+                actor_optimizer=th.optim.SGD(actor.parameters(), lr=0.05),
+                critic_optimizer=th.optim.SGD(critic1.parameters(), lr=0.05),
+                config=SACConfig(action_shape=(action_dim,)),
+            )
+
     def test_sac_actor_regularizer_contributes_to_loss(self):
         th.manual_seed(0)
         obs_dim = 4
@@ -247,8 +283,10 @@ class LearnerSmokeTest(unittest.TestCase):
             critic1=critic1,
             critic2=critic2,
             actor_optimizer=th.optim.SGD(actor.parameters(), lr=0.05),
-            critic1_optimizer=th.optim.SGD(critic1.parameters(), lr=0.05),
-            critic2_optimizer=th.optim.SGD(critic2.parameters(), lr=0.05),
+            critic_optimizer=th.optim.SGD(
+                [*critic1.parameters(), *critic2.parameters()],
+                lr=0.05,
+            ),
             config=SACConfig(
                 action_shape=(action_dim,),
                 regularizers=[actor_l2],

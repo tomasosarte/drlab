@@ -682,8 +682,10 @@ def train_drlab_sac(config: BenchmarkConfig, seed: int) -> RunResult:
         critic1=critic1,
         critic2=critic2,
         actor_optimizer=th.optim.Adam(actor.parameters(), lr=3e-4),
-        critic1_optimizer=th.optim.Adam(critic1.parameters(), lr=3e-4),
-        critic2_optimizer=th.optim.Adam(critic2.parameters(), lr=3e-4),
+        critic_optimizer=th.optim.Adam(
+            [*critic1.parameters(), *critic2.parameters()],
+            lr=3e-4,
+        ),
         config=SACConfig(
             device=config.device,
             gamma=config.gamma,

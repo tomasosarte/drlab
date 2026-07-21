@@ -52,6 +52,26 @@ class OffPolicyLearner(ABC):
 
         return target
 
+    @staticmethod
+    def _validate_optimizer_parameters(
+        optimizer: th.optim.Optimizer,
+        expected_parameters: Iterable[th.nn.Parameter],
+        optimizer_name: str,
+    ) -> None:
+        expected_parameter_ids = sorted(
+            id(parameter) for parameter in expected_parameters
+        )
+        optimizer_parameter_ids = sorted(
+            id(parameter)
+            for group in optimizer.param_groups
+            for parameter in group["params"]
+        )
+
+        if optimizer_parameter_ids != expected_parameter_ids:
+            raise ValueError(
+                f"{optimizer_name} must contain exactly its model parameters."
+            )
+
     def _hard_update(self, target: th.nn.Module, source: th.nn.Module):
         target.load_state_dict(source.state_dict())
         target.eval()

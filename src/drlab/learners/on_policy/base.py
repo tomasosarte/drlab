@@ -87,7 +87,7 @@ class OnPolicyLearner:
         if self.config.clip_grad:
             th.nn.utils.clip_grad_norm_(
                 self.parameters,
-                self.config.grad_norm_clip,
+                self.config.clipnorm,
             )
         self.optimizer.step()
 

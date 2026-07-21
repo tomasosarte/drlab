@@ -89,7 +89,7 @@ class DQNLearner(OffPolicyLearner):
             loss,
             optimizer=self.optimizer,
             parameters=self.model.parameters(),
-            grad_norm_clip=self.grad_norm_clip,
+            clipnorm=self.clipnorm,
         )
 
         if self.target_model is not None:

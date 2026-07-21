@@ -18,7 +18,7 @@ class OnPolicyConfig:
     num_actions: int = 2
 
     clip_grad: bool = True
-    grad_norm_clip: float = 1.0
+    clipnorm: float = 1.0
 
     use_entropy: bool = False
     entropy_max_lambda: float = 0.0

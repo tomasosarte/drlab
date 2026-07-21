@@ -131,15 +131,15 @@ class SACLearner(OffPolicyLearner):
         self.critic2_optimizer.zero_grad(set_to_none=True)
         critic_loss.backward()
 
-        if self.grad_norm_clip is not None:
+        if self.clipnorm is not None:
             # Clip each critic independently to preserve the previous behavior.
             th.nn.utils.clip_grad_norm_(
                 self.critic1.parameters(),
-                self.grad_norm_clip,
+                self.clipnorm,
             )
             th.nn.utils.clip_grad_norm_(
                 self.critic2.parameters(),
-                self.grad_norm_clip,
+                self.clipnorm,
             )
 
         self.critic1_optimizer.step()
@@ -168,7 +168,7 @@ class SACLearner(OffPolicyLearner):
             actor_loss,
             optimizer=self.actor_optimizer,
             parameters=self.actor.parameters(),
-            grad_norm_clip=self.grad_norm_clip,
+            clipnorm=self.clipnorm,
         )
 
         # --------------------------------------------------
@@ -182,7 +182,7 @@ class SACLearner(OffPolicyLearner):
             alpha_loss,
             optimizer=self.alpha_optimizer,
             parameters=[self.log_alpha],
-            grad_norm_clip=None,
+            clipnorm=self.clipnorm,
         )
 
         # Update target networks

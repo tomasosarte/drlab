@@ -7,11 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-07-21
+
+### Added
+
+- Added `SACConfig.initial_alpha` to configure SAC's entropy coefficient before
+  automatic tuning, including validation that the value is positive.
+
 ### Changed
 
-- Simplified off-policy gradient clipping configuration. Set
-  `grad_norm_clip=None` to disable clipping; the redundant `clip_grad` option
-  has been removed.
+- Renamed the gradient-norm limit from `grad_norm_clip` to `clipnorm`. For
+  off-policy learners, set `clipnorm=None` to disable clipping; the redundant
+  `clip_grad` option has been removed.
+- Refined the off-policy optimization helper to accept any parameter iterable,
+  backpropagate only through the supplied parameters, and select gradient
+  clipping per optimization call.
+- Optimized SAC action sampling and log-probability calculation with a
+  specialized reparameterized Gaussian implementation.
+- Improved SAC training efficiency by updating both critics with one backward
+  pass and restricting actor optimization to actor parameters.
+- Batched soft target-network parameter updates with PyTorch foreach
+  operations, and made the hard and soft update helpers internal methods.
 
 ## [0.2.3] - 2026-07-16
 
@@ -86,7 +102,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release of `drlab`.
 
-[Unreleased]: https://github.com/tomasosarte/drlab/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/tomasosarte/drlab/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/tomasosarte/drlab/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/tomasosarte/drlab/compare/daff97e...v0.2.3
 [0.2.2]: https://github.com/tomasosarte/drlab/compare/ea2820f...daff97e
 [0.2.1]: https://github.com/tomasosarte/drlab/compare/4fbd134...ea2820f

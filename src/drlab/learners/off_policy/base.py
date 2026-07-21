@@ -16,7 +16,7 @@ class OffPolicyLearner(ABC):
         self.regularizers = config.regularizers
         self.reg_lams = config.reg_lams
 
-        self.grad_norm_clip = config.grad_norm_clip
+        self.clipnorm = config.clipnorm
 
         self.use_target_model = config.use_target_model
         self.target_update = TargetUpdate(config.target_update)
@@ -134,16 +134,16 @@ class OffPolicyLearner(ABC):
         loss: th.Tensor,
         optimizer: th.optim.Optimizer,
         parameters: Iterable[th.nn.Parameter],
-        grad_norm_clip: float | None = None,
+        clipnorm: float | None = None,
     ) -> None:
         parameters = tuple(parameters)
         optimizer.zero_grad(set_to_none=True)
         loss.backward(inputs=parameters)
 
-        if grad_norm_clip is not None:
+        if clipnorm is not None:
             th.nn.utils.clip_grad_norm_(
                 parameters,
-                grad_norm_clip,
+                clipnorm,
             )
 
         optimizer.step()

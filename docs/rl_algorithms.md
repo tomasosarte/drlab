@@ -138,7 +138,7 @@ Useful config fields include:
 - `target_update`: `"soft"` or `"hard"`.
 - `soft_target_update_param`: soft-update coefficient.
 - `target_update_interval`: hard-update interval.
-- `grad_norm_clip`: maximum gradient norm, or `None` to disable clipping.
+- `clipnorm`: maximum gradient norm, or `None` to disable clipping.
 
 ### SAC
 
@@ -225,7 +225,7 @@ Useful config fields include:
 - `normalize_returns`: normalizes returns inside the batch before computing the
   policy-gradient loss.
 - `use_entropy`: adds entropy regularization for exploration.
-- `clip_grad` and `grad_norm_clip`: gradient clipping settings.
+- `clip_grad` and `clipnorm`: gradient clipping settings.
 
 ### Actor-Critic
 

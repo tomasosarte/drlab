@@ -104,7 +104,7 @@ class LearnerSmokeTest(unittest.TestCase):
             th.optim.SGD(model.parameters(), lr=0.05),
             DQNConfig(
                 num_actions=2,
-                grad_norm_clip=None,
+                clipnorm=None,
             ),
         )
 
@@ -205,7 +205,7 @@ class LearnerSmokeTest(unittest.TestCase):
         self.assertTrue(parameters_changed(critic1, critic1_before))
         self.assertTrue(parameters_changed(critic2, critic2_before))
         self.assertTrue(all(call_count == 1 for call_count in critic_grad_calls.values()))
-        self.assertEqual(clip_grad_norm.call_count, 3)
+        self.assertEqual(clip_grad_norm.call_count, 4)
         self.assertEqual(
             set(learner.last_losses),
             {"actor", "critic", "alpha", "regularization", "total"},

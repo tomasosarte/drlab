@@ -20,7 +20,7 @@ class OffPolicyConfig:
     regularizers: list[Callable[..., th.Tensor | float]] = field(default_factory=list)
     reg_lams: list[float] = field(default_factory=list)
 
-    grad_norm_clip: float | None = 1.0
+    clipnorm: float | None = 1.0
 
     use_target_model: bool = True
     target_update: TargetUpdate | str = TargetUpdate.SOFT

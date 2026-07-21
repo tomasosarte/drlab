@@ -35,7 +35,7 @@ from drlab.learners import (
 from drlab.replay import ReplayBuffer, TransitionBatch
 from drlab.runners import Runner
 
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 
 __all__ = [
     "__version__",

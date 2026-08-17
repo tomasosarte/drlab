@@ -196,12 +196,18 @@ class SACLearner(OffPolicyLearner):
         ])
 
         loss = actor_loss + critic_loss + alpha_loss
+
+        # A single batched host transfer avoids five separate device
+        # synchronizations (one per .item() call) on every training step.
+        actor_v, critic_v, alpha_v, reg_v, total_v = th.stack(
+            [policy_loss, critic_loss, alpha_loss, reg_loss, loss]
+        ).tolist()
         self.last_losses = {
-            "actor": float(policy_loss.item()),
-            "critic": float(critic_loss.item()),
-            "alpha": float(alpha_loss.item()),
-            "regularization": float(reg_loss.item()),
-            "total": float(loss.item()),
+            "actor": actor_v,
+            "critic": critic_v,
+            "alpha": alpha_v,
+            "regularization": reg_v,
+            "total": total_v,
         }
 
         return self.last_losses["total"]

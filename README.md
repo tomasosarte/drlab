@@ -102,7 +102,8 @@ episode returns, episode lengths, and optionally the last completed episode.
 
 `ReplayBuffer` stores transitions for off-policy learning. It supports both
 discrete and continuous action spaces through the configured action shape and
-action type.
+action type. Call `reset()` to remove all stored transitions and reuse the
+buffer.
 
 `TransitionBatch` is the tensor container passed between runners, replay
 buffers, experiments, and learners.

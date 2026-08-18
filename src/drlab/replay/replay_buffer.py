@@ -37,6 +37,11 @@ class ReplayBuffer:
     def __len__(self) -> int:
         return self.size
 
+    def reset(self) -> None:
+        """Remove all transitions from the buffer."""
+        self.ptr = 0
+        self.size = 0
+
     def add(
         self,
         states: np.ndarray,       # [B, *obs_shape]

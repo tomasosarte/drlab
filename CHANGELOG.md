@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `reset_optimizers()` to all learners for clearing optimizer state.
+
 ## [0.2.5] - 2026-07-21
 
 ### Added

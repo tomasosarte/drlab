@@ -20,6 +20,10 @@ class OnPolicyLearner:
 
         self._validate_config()
 
+    def reset_optimizers(self) -> None:
+        """Clear the optimizer state."""
+        self.optimizer.state.clear()
+
     def _validate_config(self):
         if len(self.config.regularizers) != len(self.config.reg_lams):
             raise ValueError("regularizers and reg_lams must have same length.")

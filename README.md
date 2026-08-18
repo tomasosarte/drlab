@@ -108,6 +108,9 @@ buffer.
 `TransitionBatch` is the tensor container passed between runners, replay
 buffers, experiments, and learners.
 
+All learners provide `reset_optimizers()` to clear optimizer state without
+changing gradients, optimizer settings, or model parameters.
+
 ## Simple Usage
 
 This example trains a DQN agent on `CartPole-v1`:

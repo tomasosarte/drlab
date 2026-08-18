@@ -28,6 +28,10 @@ class DQNLearner(OffPolicyLearner):
         if self.use_target_model:
             self.target_model = self.make_target_model(self.model)
 
+    def reset_optimizers(self) -> None:
+        """Clear the optimizer state."""
+        self.optimizer.state.clear()
+
     def _validate_dqn_config(self) -> None:
         if self.double_q and not self.use_target_model:
             raise ValueError("double_q=True requires use_target_model=True.")

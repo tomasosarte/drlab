@@ -63,6 +63,15 @@ class SACLearner(OffPolicyLearner):
             lr=config.alpha_lr,
         )
 
+    def reset_optimizers(self) -> None:
+        """Clear the state of every optimizer owned by the learner."""
+        for optimizer in (
+            self.actor_optimizer,
+            self.critic_optimizer,
+            self.alpha_optimizer,
+        ):
+            optimizer.state.clear()
+
     @property
     def alpha(self) -> th.Tensor:
         return self.log_alpha.exp()

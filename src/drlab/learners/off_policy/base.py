@@ -28,6 +28,10 @@ class OffPolicyLearner(ABC):
 
         self._validate_config()
 
+    def reset_optimizers(self) -> None:
+        """Reset optimizer state owned by the learner, if any."""
+        pass
+
     def _validate_config(self) -> None:
         if len(self.regularizers) != len(self.reg_lams):
             raise ValueError("regularizers and reg_lams must have same length.")

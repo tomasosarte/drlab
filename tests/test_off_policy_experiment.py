@@ -71,6 +71,11 @@ def one_transition() -> TransitionBatch:
 
 
 class OffPolicyExperimentTest(unittest.TestCase):
+    def test_base_learner_optimizer_reset_is_a_noop(self):
+        learner = CountingLearner()
+
+        self.assertIsNone(learner.reset_optimizers())
+
     def make_experiment(self, config: OffPolicyExperimentConfig) -> OffPolicyExperiment:
         env = OneStepEnv()
         learner = CountingLearner()

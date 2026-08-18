@@ -37,7 +37,7 @@ class PublicAPITest(unittest.TestCase):
             "WarmupController",
         }
 
-        self.assertEqual(drlab.__version__, "0.2.8")
+        self.assertEqual(drlab.__version__, "0.2.9")
         self.assertTrue(expected.issubset(set(drlab.__all__)))
         for name in expected:
             self.assertTrue(hasattr(drlab, name), name)

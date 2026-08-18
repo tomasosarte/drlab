@@ -25,7 +25,88 @@ def parameters_changed(model, before):
     )
 
 
+def populate_optimizer_state(optimizer):
+    optimizer.zero_grad(set_to_none=True)
+    loss = sum(
+        parameter.square().sum()
+        for group in optimizer.param_groups
+        for parameter in group["params"]
+    )
+    loss.backward()
+    optimizer.step()
+
+
+def assert_optimizer_state_reset(test_case, optimizer):
+    test_case.assertEqual(len(optimizer.state), 0)
+    for group in optimizer.param_groups:
+        for parameter in group["params"]:
+            test_case.assertIsNotNone(parameter.grad)
+
+
 class LearnerSmokeTest(unittest.TestCase):
+    def test_all_on_policy_learners_reset_their_optimizer(self):
+        cases = (
+            (ReinforceLearner, ReinforceConfig(num_actions=2), 2),
+            (ActorCriticLearner, ActorCriticConfig(num_actions=2), 3),
+            (PPOLearner, PPOConfig(num_actions=2), 3),
+        )
+
+        for learner_type, config, output_size in cases:
+            with self.subTest(learner=learner_type.__name__):
+                actor = th.nn.Linear(4, output_size)
+                optimizer = th.optim.Adam(actor.parameters())
+                learner = learner_type(actor, optimizer, config)
+                populate_optimizer_state(optimizer)
+
+                learner.reset_optimizers()
+
+                assert_optimizer_state_reset(self, optimizer)
+
+    def test_dqn_resets_its_optimizer(self):
+        model = th.nn.Linear(4, 2)
+        optimizer = th.optim.Adam(model.parameters())
+        learner = DQNLearner(
+            model,
+            optimizer,
+            DQNConfig(num_actions=2),
+        )
+        populate_optimizer_state(optimizer)
+
+        learner.reset_optimizers()
+
+        assert_optimizer_state_reset(self, optimizer)
+
+    def test_sac_resets_all_three_optimizers(self):
+        obs_dim = 4
+        action_dim = 2
+        actor = th.nn.Linear(obs_dim, 2 * action_dim)
+        critic1 = th.nn.Linear(obs_dim + action_dim, 1)
+        critic2 = th.nn.Linear(obs_dim + action_dim, 1)
+        actor_optimizer = th.optim.Adam(actor.parameters())
+        critic_optimizer = th.optim.Adam(
+            [*critic1.parameters(), *critic2.parameters()]
+        )
+        learner = SACLearner(
+            actor=actor,
+            critic1=critic1,
+            critic2=critic2,
+            actor_optimizer=actor_optimizer,
+            critic_optimizer=critic_optimizer,
+            config=SACConfig(action_shape=(action_dim,)),
+        )
+        optimizers = (
+            actor_optimizer,
+            critic_optimizer,
+            learner.alpha_optimizer,
+        )
+        for optimizer in optimizers:
+            populate_optimizer_state(optimizer)
+
+        learner.reset_optimizers()
+
+        for optimizer in optimizers:
+            assert_optimizer_state_reset(self, optimizer)
+
     def test_soft_target_update_matches_original_arithmetic_exactly(self):
         source1 = th.nn.Linear(4, 3)
         source2 = th.nn.Linear(3, 2)

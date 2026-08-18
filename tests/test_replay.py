@@ -134,3 +134,37 @@ class ReplayBufferTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "empty buffer"):
             buffer.sample(1)
+
+    def test_reset_empties_buffer_and_allows_reuse(self):
+        buffer = ReplayBuffer(capacity=3, obs_shape=(1,), device="cpu")
+        buffer.add(
+            states=np.asarray([[0], [1]], dtype=np.float32),
+            actions=np.asarray([0, 1]),
+            rewards=np.asarray([1.0, 2.0]),
+            terminated=np.asarray([False, True]),
+            truncated=np.asarray([False, False]),
+            next_states=np.asarray([[1], [2]], dtype=np.float32),
+            returns=np.asarray([3.0, 2.0]),
+        )
+
+        buffer.reset()
+
+        self.assertEqual(len(buffer), 0)
+        self.assertEqual(buffer.ptr, 0)
+        self.assertEqual(buffer.get_all().states.shape, (0, 1))
+        with self.assertRaisesRegex(ValueError, "empty buffer"):
+            buffer.sample(1)
+
+        buffer.add(
+            states=np.asarray([[4]], dtype=np.float32),
+            actions=np.asarray([1]),
+            rewards=np.asarray([5.0]),
+            terminated=np.asarray([False]),
+            truncated=np.asarray([True]),
+            next_states=np.asarray([[5]], dtype=np.float32),
+            returns=np.asarray([5.0]),
+        )
+
+        self.assertEqual(len(buffer), 1)
+        self.assertEqual(buffer.ptr, 1)
+        self.assertEqual(buffer.get_all().states.item(), 4.0)

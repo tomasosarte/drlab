@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-08-19
+
+### Added
+
+- Added `SACLearner.reset_log_alpha()` for resetting the entropy temperature
+  to its initial value, useful at continual-learning task boundaries so each
+  task tunes its own temperature independently.
+
 ## [0.2.9] - 2026-08-18
 
 ### Fixed
@@ -150,7 +158,8 @@ from 0.2.5; it only updates the package version metadata.
 
 - Initial release of `drlab`.
 
-[Unreleased]: https://github.com/tomasosarte/drlab/compare/v0.2.9...HEAD
+[Unreleased]: https://github.com/tomasosarte/drlab/compare/v0.2.10...HEAD
+[0.2.10]: https://github.com/tomasosarte/drlab/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/tomasosarte/drlab/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/tomasosarte/drlab/compare/v0.2.7...v0.2.8
 [0.2.7]: https://github.com/tomasosarte/drlab/compare/v0.2.6...v0.2.7

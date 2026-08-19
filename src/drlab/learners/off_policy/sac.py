@@ -72,6 +72,15 @@ class SACLearner(OffPolicyLearner):
         ):
             optimizer.state.clear()
 
+    def reset_log_alpha(self, initial_alpha: float | None = None) -> None:
+        """Reset the entropy temperature to an initial value."""
+        value = self.config.initial_alpha if initial_alpha is None else initial_alpha
+        if value <= 0.0:
+            raise ValueError("initial_alpha must be > 0.")
+
+        with th.no_grad():
+            self.log_alpha.fill_(math.log(value))
+
     @property
     def alpha(self) -> th.Tensor:
         return self.log_alpha.exp()

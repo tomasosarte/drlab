@@ -107,6 +107,55 @@ class LearnerSmokeTest(unittest.TestCase):
         for optimizer in optimizers:
             assert_optimizer_state_reset(self, optimizer)
 
+    def test_sac_reset_log_alpha_defaults_to_configured_initial_alpha(self):
+        obs_dim = 4
+        action_dim = 2
+        actor = th.nn.Linear(obs_dim, 2 * action_dim)
+        critic1 = th.nn.Linear(obs_dim + action_dim, 1)
+        critic2 = th.nn.Linear(obs_dim + action_dim, 1)
+        learner = SACLearner(
+            actor=actor,
+            critic1=critic1,
+            critic2=critic2,
+            actor_optimizer=th.optim.Adam(actor.parameters()),
+            critic_optimizer=th.optim.Adam(
+                [*critic1.parameters(), *critic2.parameters()]
+            ),
+            config=SACConfig(action_shape=(action_dim,), initial_alpha=0.2),
+        )
+
+        with th.no_grad():
+            learner.log_alpha.fill_(5.0)
+        self.assertNotAlmostEqual(learner.alpha.item(), 0.2)
+
+        learner.reset_log_alpha()
+
+        self.assertAlmostEqual(learner.alpha.item(), 0.2)
+
+    def test_sac_reset_log_alpha_accepts_explicit_value(self):
+        obs_dim = 4
+        action_dim = 2
+        actor = th.nn.Linear(obs_dim, 2 * action_dim)
+        critic1 = th.nn.Linear(obs_dim + action_dim, 1)
+        critic2 = th.nn.Linear(obs_dim + action_dim, 1)
+        learner = SACLearner(
+            actor=actor,
+            critic1=critic1,
+            critic2=critic2,
+            actor_optimizer=th.optim.Adam(actor.parameters()),
+            critic_optimizer=th.optim.Adam(
+                [*critic1.parameters(), *critic2.parameters()]
+            ),
+            config=SACConfig(action_shape=(action_dim,), initial_alpha=0.2),
+        )
+
+        learner.reset_log_alpha(initial_alpha=1.5)
+
+        self.assertAlmostEqual(learner.alpha.item(), 1.5)
+
+        with self.assertRaisesRegex(ValueError, "initial_alpha must be > 0"):
+            learner.reset_log_alpha(initial_alpha=0.0)
+
     def test_soft_target_update_matches_original_arithmetic_exactly(self):
         source1 = th.nn.Linear(4, 3)
         source2 = th.nn.Linear(3, 2)

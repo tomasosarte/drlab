@@ -1,6 +1,7 @@
 import math
 
 import torch as th
+import torch.nn.functional as F
 
 from .base import OffPolicyLearner
 from .configs import SACConfig
@@ -117,7 +118,9 @@ class SACLearner(OffPolicyLearner):
         log_prob = -0.5 * (
             eps.square() + 2.0 * log_std + math.log(2.0 * math.pi)
         )
-        log_prob -= th.log(1.0 - action.pow(2) + 1e-6)  # Tanh correction
+        # Numerically stable tanh correction (SAC paper, Appendix C):
+        # avoids log(1 - tanh(u)^2), which loses precision as |u| grows.
+        log_prob -= 2.0 * (math.log(2.0) - u - F.softplus(-2.0 * u))
         log_prob = log_prob.sum(dim=-1, keepdim=True)  # Sum over action dimensions
 
         return action, log_prob

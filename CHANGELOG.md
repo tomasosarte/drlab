@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.11] - 2026-08-20
+
+### Fixed
+
+- `SACLearner.sample_action_and_log_prob()` now uses the SAC paper's
+  (Appendix C) numerically stable tanh correction,
+  `2*(log(2) - u - softplus(-2*u))`, computed directly from the
+  pre-squash sample `u` instead of `log(1 - tanh(u)^2 + eps)`. The old
+  form saturates once `tanh(u)` rounds to exactly +/-1 in float32
+  (`|u| >~ 10`), after which the correction term - and its gradient -
+  stops responding to further growth in `u`, silently losing the
+  entropy term's corrective signal exactly when a policy is most
+  overconfident.
+
 ## [0.2.10] - 2026-08-19
 
 ### Added
@@ -158,7 +172,8 @@ from 0.2.5; it only updates the package version metadata.
 
 - Initial release of `drlab`.
 
-[Unreleased]: https://github.com/tomasosarte/drlab/compare/v0.2.10...HEAD
+[Unreleased]: https://github.com/tomasosarte/drlab/compare/v0.2.11...HEAD
+[0.2.11]: https://github.com/tomasosarte/drlab/compare/v0.2.10...v0.2.11
 [0.2.10]: https://github.com/tomasosarte/drlab/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/tomasosarte/drlab/compare/v0.2.8...v0.2.9
 [0.2.8]: https://github.com/tomasosarte/drlab/compare/v0.2.7...v0.2.8

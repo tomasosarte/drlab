@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.12] - 2026-10-11
+
+### Fixed
+
+- `OffPolicyExperiment.run()` preserves restored step counts, schedules callbacks
+  from that count, and initializes the progress bar accordingly.
+
 ## [0.2.11] - 2026-08-20
 
 ### Fixed
@@ -172,7 +179,8 @@ from 0.2.5; it only updates the package version metadata.
 
 - Initial release of `drlab`.
 
-[Unreleased]: https://github.com/tomasosarte/drlab/compare/v0.2.11...HEAD
+[Unreleased]: https://github.com/tomasosarte/drlab/compare/v0.2.12...HEAD
+[0.2.12]: https://github.com/tomasosarte/drlab/compare/v0.2.11...v0.2.12
 [0.2.11]: https://github.com/tomasosarte/drlab/compare/v0.2.10...v0.2.11
 [0.2.10]: https://github.com/tomasosarte/drlab/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/tomasosarte/drlab/compare/v0.2.8...v0.2.9

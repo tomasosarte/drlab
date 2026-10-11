@@ -81,6 +81,10 @@ updates from transitions collected earlier.
 4. Sample minibatches from the buffer.
 5. Call the learner one or more times.
 
+`run()` preserves `experiment.steps`, allowing a restored step count to resume
+toward the total `max_steps` target. The progress bar starts at that count;
+callbacks run immediately at it, then at each `step_callback_interval` afterward.
+
 `OffPolicyExperimentConfig` accepts these parameters:
 
 | Parameter | Description |

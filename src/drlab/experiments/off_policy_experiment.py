@@ -150,11 +150,10 @@ class OffPolicyExperiment:
 
     def run(self):
         
-        self.steps = 0
         if self.step_callback is not None:
             self.step_callback(self.steps)
-        next_callback_step = self.step_callback_interval
-        pbar = tqdm(total=self.max_steps, desc=self.experiment_name, dynamic_ncols=True, mininterval=1.0)
+        next_callback_step = self.steps + self.step_callback_interval if self.step_callback is not None else None
+        pbar = tqdm(total=self.max_steps, initial=self.steps, desc=self.experiment_name, dynamic_ncols=True, mininterval=1.0)
         while self.steps < self.max_steps:
 
             # 1. Run batch of transitions
